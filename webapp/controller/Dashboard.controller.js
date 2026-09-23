@@ -153,10 +153,6 @@ sap.ui.define([
 
         /* =========================================================
          * DASHBOARD ROUTE MATCHED
-         *
-         * This guarantees that when the user returns to the
-         * Dashboard after issuing stock, the latest StockMovements
-         * are loaded again.
          * ========================================================= */
         _onDashboardRouteMatched: function () {
 
@@ -170,9 +166,6 @@ sap.ui.define([
 
         /* =========================================================
          * STOCK ISSUED EVENT
-         *
-         * IssueStock.controller publishes this event after the
-         * backend action succeeds.
          * ========================================================= */
         _onStockIssued: function () {
 
@@ -431,52 +424,72 @@ sap.ui.define([
 
                 /* =================================================
                  * LOAD RECENT STOCK ISSUES
-                 *
-                 * Independent of Inventory so that an issue
-                 * history is still visible even if inventory
-                 * processing changes.
                  * ================================================= */
                 await this._loadRecentStockIssues();
 
+
                 /* =================================================
- * LOAD TODAY'S TOTAL MOVEMENTS
- * ================================================= */
-const oLogBinding = oModel.bindList(
-    "/ApplicationLogs",
-    null,
-    [],
-    [],
-    {
-        $filter: "operation eq 'generateDailyInventorySummary' and severity eq 'INFO'",
-        $orderby: "timestamp desc"
-    }
-);
+                 * LOAD TODAY'S TOTAL MOVEMENTS
+                 *
+                 * Source:
+                 * ApplicationLogs
+                 *
+                 * Created by:
+                 * generateDailyInventorySummary
+                 * ================================================= */
+                const oLogBinding =
+                    oModel.bindList(
+                        "/ApplicationLogs",
+                        null,
+                        [],
+                        [],
+                        {
+                            $filter:
+                                "operation eq 'generateDailyInventorySummary' and severity eq 'INFO'",
 
-const aLogContexts = await oLogBinding.requestContexts(0, 1);
+                            $orderby:
+                                "timestamp desc"
+                        }
+                    );
 
-let iTotalMovementsToday = 0;
+                const aLogContexts =
+                    await oLogBinding.requestContexts(
+                        0,
+                        1
+                    );
 
-if (aLogContexts.length > 0) {
-    const oLog = aLogContexts[0].getObject();
+                let iTotalMovementsToday = 0;
 
-    try {
-        const oSummary = JSON.parse(oLog.message);
+                if (aLogContexts.length > 0) {
 
-        iTotalMovementsToday = Number(
-            oSummary.totalMovements || 0
-        );
-    } catch (oError) {
-        console.error(
-            "Failed to parse daily inventory summary:",
-            oError
-        );
-    }
-}
+                    const oLog =
+                        aLogContexts[0].getObject();
 
-console.log(
-    "Today's Total Movements:",
-    iTotalMovementsToday
-);
+                    try {
+
+                        const oSummary =
+                            JSON.parse(
+                                oLog.message
+                            );
+
+                        iTotalMovementsToday =
+                            Number(
+                                oSummary.totalMovements || 0
+                            );
+
+                    } catch (oError) {
+
+                        console.error(
+                            "Failed to parse daily inventory summary:",
+                            oError
+                        );
+                    }
+                }
+
+                console.log(
+                    "Today's Total Movements:",
+                    iTotalMovementsToday
+                );
 
 
                 /* =================================================
@@ -651,12 +664,6 @@ console.log(
 
 
                 /* =====================================================
-                 * HEALTHY STOCK
-                 * ===================================================== */
-              
-
-
-                /* =====================================================
                  * UPDATE KPI MODEL
                  * ===================================================== */
                 this.getView()
@@ -760,27 +767,29 @@ console.log(
                                 cssClass:
                                     "kpiRed"
                             },
+
                             {
-    key: "totalMovementsToday",
+                                key:
+                                    "totalMovementsToday",
 
-    title:
-        "Total Movements",
+                                title:
+                                    "Total Movements",
 
-    subtitle:
-        "Today's ISSUE + TRANSFER",
+                                subtitle:
+                                    "Today's ISSUE + TRANSFER",
 
-    value:
-        iTotalMovementsToday,
+                                value:
+                                    iTotalMovementsToday,
 
-    unit:
-        "movements",
+                                unit:
+                                    "movements",
 
-    icon:
-        "sap-icon://activity-items",
+                                icon:
+                                    "sap-icon://activity-items",
 
-    cssClass:
-        "kpiBlue"
-}
+                                cssClass:
+                                    "kpiBlue"
+                            }
                         ]
                     });
 
@@ -960,10 +969,17 @@ console.log(
                 console.log(
                     "Dashboard KPI:",
                     {
-                        total: aInvRows.length,
-                        lowStock: iLowStock,
-                        outOfStock: iOutOfStock
-                       
+                        total:
+                            aInvRows.length,
+
+                        lowStock:
+                            iLowStock,
+
+                        outOfStock:
+                            iOutOfStock,
+
+                        totalMovementsToday:
+                            iTotalMovementsToday
                     }
                 );
 
@@ -980,33 +996,46 @@ console.log(
         /* =========================================================
          * KPI TILE NAVIGATION
          * ========================================================= */
-   onKpiTilePress: function (oEvent) {
-    const oContext =
-        oEvent
-            .getSource()
-            .getBindingContext("kpiTiles");
+        onKpiTilePress: function (oEvent) {
 
-    if (!oContext) {
-        console.error(
-            "KPI tile binding context not found."
-        );
-        return;
-    }
+            const oContext =
+                oEvent
+                    .getSource()
+                    .getBindingContext("kpiTiles");
 
-    const oTileData =
-        oContext.getObject();
+            if (!oContext) {
 
-    // Total Movements is display-only
-    if (oTileData.key === "totalMovementsToday") {
-        return;
-    }
+                console.error(
+                    "KPI tile binding context not found."
+                );
 
-    this.getOwnerComponent()
-        .getRouter()
-        .navTo("inventory", {
-            filter: oTileData.key
-        });
-},
+                return;
+            }
+
+            const oTileData =
+                oContext.getObject();
+
+            /* =====================================================
+             * TOTAL MOVEMENTS IS DISPLAY ONLY
+             * ===================================================== */
+            if (
+                oTileData.key ===
+                "totalMovementsToday"
+            ) {
+                return;
+            }
+
+            this.getOwnerComponent()
+                .getRouter()
+                .navTo(
+                    "inventory",
+                    {
+                        filter:
+                            oTileData.key
+                    }
+                );
+        },
+
 
         /* =========================================================
          * WAREHOUSE CHART SELECT

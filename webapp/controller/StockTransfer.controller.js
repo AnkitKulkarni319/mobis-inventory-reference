@@ -41,7 +41,8 @@ sap.ui.define([
 
             try {
 
-                var oModel = this.getView().getModel();
+                var oModel =
+                    this.getOwnerComponent().getModel();
 
                 var oBinding =
                     oModel.bindList("/SpareParts");
@@ -54,7 +55,6 @@ sap.ui.define([
                         return oContext.getObject();
                     });
 
-                // Initially show all parts
                 this.getView()
                     .getModel("transferParts")
                     .setProperty(
@@ -86,10 +86,6 @@ sap.ui.define([
 
             try {
 
-                // -------------------------------------------------
-                // IF NO LOCATION SELECTED
-                // SHOW ALL SPARE PARTS
-                // -------------------------------------------------
                 if (!sLocationId) {
 
                     oTransferPartsModel.setProperty(
@@ -103,11 +99,8 @@ sap.ui.define([
                 }
 
                 var oModel =
-                    this.getView().getModel();
+                    this.getOwnerComponent().getModel();
 
-                // -------------------------------------------------
-                // QUERY INVENTORY FOR SELECTED LOCATION
-                // -------------------------------------------------
                 var oBinding =
                     oModel.bindList(
                         "/Inventory",
@@ -131,9 +124,6 @@ sap.ui.define([
                         10000
                     );
 
-                // -------------------------------------------------
-                // GET INVENTORY OBJECTS
-                // -------------------------------------------------
                 var aInventory =
                     aContexts.map(function (oContext) {
                         return oContext.getObject();
@@ -149,9 +139,6 @@ sap.ui.define([
                     aInventory
                 );
 
-                // -------------------------------------------------
-                // GET PARTS DIRECTLY FROM EXPANDED ASSOCIATION
-                // -------------------------------------------------
                 var aParts = [];
 
                 aInventory.forEach(function (oInventory) {
@@ -161,7 +148,6 @@ sap.ui.define([
                         oInventory.part.ID
                     ) {
 
-                        // Avoid duplicate parts
                         var bExists =
                             aParts.some(function (oPart) {
 
@@ -179,11 +165,7 @@ sap.ui.define([
                     }
                 });
 
-                // -------------------------------------------------
-                // FALLBACK:
-                // IF EXPANDED PART IS NOT AVAILABLE,
-                // MATCH USING part_ID
-                // -------------------------------------------------
+                // Fallback if expanded part is not available
                 if (
                     aParts.length === 0 &&
                     aInventory.length > 0
@@ -218,9 +200,6 @@ sap.ui.define([
                     aParts
                 );
 
-                // -------------------------------------------------
-                // UPDATE SPARE PART DROPDOWN
-                // -------------------------------------------------
                 oTransferPartsModel.setProperty(
                     "/items",
                     aParts
@@ -297,9 +276,7 @@ sap.ui.define([
                 this.byId("transferStatusFilter")
                     .getSelectedKey();
 
-            // -----------------------------------------------------
             // FROM LOCATION
-            // -----------------------------------------------------
             if (sFromLocation) {
 
                 aFilters.push(
@@ -311,9 +288,7 @@ sap.ui.define([
                 );
             }
 
-            // -----------------------------------------------------
             // TO LOCATION
-            // -----------------------------------------------------
             if (sToLocation) {
 
                 aFilters.push(
@@ -325,9 +300,7 @@ sap.ui.define([
                 );
             }
 
-            // -----------------------------------------------------
             // PART NUMBER
-            // -----------------------------------------------------
             if (sPartNumber) {
 
                 aFilters.push(
@@ -339,9 +312,7 @@ sap.ui.define([
                 );
             }
 
-            // -----------------------------------------------------
             // STATUS
-            // -----------------------------------------------------
             if (sStatus === "APPROVED") {
 
                 aFilters.push(
@@ -403,9 +374,6 @@ sap.ui.define([
                 );
             }
 
-            // -----------------------------------------------------
-            // APPLY FILTERS
-            // -----------------------------------------------------
             oBinding.filter(
                 aFilters,
                 "Application"
@@ -453,7 +421,7 @@ sap.ui.define([
                 this.getView();
 
             var oModel =
-                oView.getModel();
+                this.getOwnerComponent().getModel();
 
             var sFromLocation =
                 this.byId("transferFromSelect")
@@ -471,16 +439,10 @@ sap.ui.define([
                 this.byId("transferQtyInput")
                     .getValue();
 
-            var sReference =
-                this.byId("transferRefInput")
-                    .getValue();
-
             var iQuantity =
                 Number(sQuantity);
 
-            // -----------------------------------------------------
             // VALIDATION
-            // -----------------------------------------------------
 
             if (!sFromLocation) {
 
@@ -527,9 +489,8 @@ sap.ui.define([
                 return;
             }
 
-            // -----------------------------------------------------
             // CREATE STOCK TRANSFER REQUEST
-            // -----------------------------------------------------
+
             try {
 
                 var oListBinding =
@@ -563,9 +524,7 @@ sap.ui.define([
                     "Stock transfer request created successfully."
                 );
 
-                // -------------------------------------------------
                 // CLEAR FORM
-                // -------------------------------------------------
 
                 this.byId("transferFromSelect")
                     .setSelectedKey("");
@@ -579,12 +538,7 @@ sap.ui.define([
                 this.byId("transferQtyInput")
                     .setValue("");
 
-                this.byId("transferRefInput")
-                    .setValue("");
-
-                // -------------------------------------------------
                 // RESTORE ALL PARTS
-                // -------------------------------------------------
 
                 this.getView()
                     .getModel("transferParts")
@@ -593,9 +547,7 @@ sap.ui.define([
                         this._aSpareParts
                     );
 
-                // -------------------------------------------------
                 // REFRESH TABLE
-                // -------------------------------------------------
 
                 var oTable =
                     this.byId("transferTable");
