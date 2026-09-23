@@ -1,0 +1,296 @@
+<mvc:View
+    controllerName="inventorytest.controller.IssueStock"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns:f="sap.ui.layout.form"
+    xmlns:core="sap.ui.core"
+    xmlns:fb="sap.ui.comp.filterbar"
+    xmlns="sap.m">
+
+    <Page
+        title="Issue Stock"
+        showNavButton="true"
+        navButtonPress="onNavBack">
+
+        <content>
+
+            <!-- =====================================================
+                 ISSUE STOCK FORM
+                 ===================================================== -->
+
+            <f:SimpleForm
+                editable="true"
+                layout="ResponsiveGridLayout">
+
+                <Label
+                    text="From Warehouse"/>
+
+                <Select
+                    id="issueLocSelect"
+                    items="{/Locations}"
+                    forceSelection="false"
+                    change="onLocationChange">
+
+                    <core:Item
+                        key="{ID}"
+                        text="{name} ({locationCode})"/>
+
+                </Select>
+
+
+                <Label
+                    text="Spare Part"/>
+
+                <Select
+                    id="issuePartSelect"
+                    items="{issueParts>/items}"
+                    forceSelection="false">
+
+                    <core:Item
+                        key="{issueParts>ID}"
+                        text="{issueParts>partNumber} — {issueParts>description}"/>
+
+                </Select>
+
+
+                <Label
+                    text="Quantity"/>
+
+                <Input
+                    id="issueQtyInput"
+                    type="Number"
+                    placeholder="e.g. 5"/>
+
+
+                <Label
+                    text="Reference"/>
+
+                <Input
+                    id="issueRefInput"
+                    placeholder="e.g. Service Order SO-2001"/>
+
+            </f:SimpleForm>
+
+
+            <!-- =====================================================
+                 ISSUE BUTTON
+                 ===================================================== -->
+
+            <Bar>
+
+                <contentRight>
+
+                    <Button
+                        text="Issue Stock"
+                        type="Emphasized"
+                        press="onIssueStock"/>
+
+                </contentRight>
+
+            </Bar>
+
+
+            <!-- =====================================================
+                 RECENT STOCK ISSUES
+                 ===================================================== -->
+
+            <VBox
+                class="sapUiMediumMarginTop sapUiSmallMarginBeginEnd sapUiSmallMarginBottom">
+
+                <Toolbar>
+
+                    <core:Icon
+                        src="sap-icon://shipping-status"/>
+
+                    <Title
+                        text="Recent Stock Issues"
+                        level="H2"
+                        class="sapUiTinyMarginBegin"/>
+
+                    <ToolbarSpacer/>
+
+                    <Button
+                        icon="sap-icon://refresh"
+                        type="Transparent"
+                        tooltip="Refresh recent stock issues"
+                        press="onRefreshRecentIssues"/>
+
+                </Toolbar>
+
+
+                <!-- =================================================
+                     FILTER BAR
+                     ================================================= -->
+
+                <fb:FilterBar
+                    id="issueFilterBar"
+                    useToolbar="true"
+                    showGoOnFB="true"
+                    showClearOnFB="true"
+                    search="onFilterSearch"
+                    clear="onFilterClear"
+                    class="sapUiSmallMarginTop"
+                    showFilterConfiguration="false">
+
+                    <fb:filterGroupItems>
+
+                        <!-- LOCATION FILTER -->
+
+                        <fb:FilterGroupItem
+                            id="issueLocationFilterItem"
+                            name="IssueLocation"
+                            label="Location"
+                            groupName="issueFilters"
+                            visibleInFilterBar="true">
+
+                            <fb:control>
+
+                                <Select
+                                    id="issueLocationFilterSelect"
+                                    width="100%"
+                                    selectedKey=""
+                                    forceSelection="false"
+                                    change="onIssueFilterLocationChange"
+                                    items="{recentIssues>/locations}">
+
+                                    <core:Item
+                                        key=""
+                                        text="All Locations"/>
+
+                                    <core:Item
+                                        key="{recentIssues>key}"
+                                        text="{recentIssues>text}"/>
+
+                                </Select>
+
+                            </fb:control>
+
+                        </fb:FilterGroupItem>
+
+
+                        <!-- PART NUMBER FILTER -->
+
+                        <fb:FilterGroupItem
+                            id="issuePartFilterItem"
+                            name="IssuePartNumber"
+                            label="Part No."
+                            groupName="issueFilters"
+                            visibleInFilterBar="true">
+
+                            <fb:control>
+
+                                <Select
+                                    id="issuePartFilterSelect"
+                                    width="100%"
+                                    selectedKey=""
+                                    forceSelection="false"
+                                    items="{recentIssues>/filterParts}">
+
+                                    <core:Item
+                                        key=""
+                                        text="All Parts"/>
+
+                                    <core:Item
+                                        key="{recentIssues>partNumber}"
+                                        text="{recentIssues>partNumber}"/>
+
+                                </Select>
+
+                            </fb:control>
+
+                        </fb:FilterGroupItem>
+
+                    </fb:filterGroupItems>
+
+                </fb:FilterBar>
+
+
+                <!-- =================================================
+                     RECENT STOCK ISSUES TABLE
+                     ================================================= -->
+
+                <Table
+                    id="issueRecentIssuesTable"
+                    class="sapUiSmallMarginTop"
+                    growing="true"
+                    growingThreshold="10"
+                    noDataText="No stock issues found"
+                    items="{recentIssues>/items}">
+
+                    <columns>
+
+                        <Column>
+                            <Text
+                                text="Part Number"/>
+                        </Column>
+
+                        <Column>
+                            <Text
+                                text="Description"/>
+                        </Column>
+
+                        <Column>
+                            <Text
+                                text="Location"/>
+                        </Column>
+
+                        <Column
+                            hAlign="End">
+
+                            <Text
+                                text="Quantity"/>
+
+                        </Column>
+
+                        <Column>
+                            <Text
+                                text="Reference"/>
+                        </Column>
+
+                        <Column>
+                            <Text
+                                text="Date / Time"/>
+                        </Column>
+
+                    </columns>
+
+
+                    <items>
+
+                        <ColumnListItem>
+
+                            <cells>
+
+                                <Text
+                                    text="{recentIssues>partNumber}"/>
+
+                                <Text
+                                    text="{recentIssues>description}"/>
+
+                                <Text
+                                    text="{recentIssues>location}"/>
+
+                                <ObjectNumber
+                                    number="{recentIssues>quantity}"
+                                    unit="units"/>
+
+                                <Text
+                                    text="{recentIssues>reference}"/>
+
+                                <Text
+                                    text="{recentIssues>dateTime}"/>
+
+                            </cells>
+
+                        </ColumnListItem>
+
+                    </items>
+
+                </Table>
+
+            </VBox>
+
+        </content>
+
+    </Page>
+
+</mvc:View>

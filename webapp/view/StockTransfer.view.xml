@@ -1,0 +1,254 @@
+<mvc:View
+controllerName="inventorytest.controller.StockTransfer"
+xmlns:mvc="sap.ui.core.mvc"
+xmlns:f="sap.ui.layout.form"
+xmlns:core="sap.ui.core"
+xmlns:fb="sap.ui.comp.filterbar"
+xmlns="sap.m">
+
+<Page
+    title="Stock Transfer"
+    showNavButton="true"
+    navButtonPress="onNavBack">
+
+    <content>
+
+        <f:SimpleForm
+            editable="true"
+            layout="ResponsiveGridLayout">
+
+            <Label text="From Location"/>
+
+            <Select
+                id="transferFromSelect"
+                items="{/Locations}"
+                forceSelection="false"
+                change="onFromLocationChange">
+
+                <core:Item
+                    key="{ID}"
+                    text="{name} ({locationCode})"/>
+            </Select>
+
+            <Label text="Spare Part"/>
+
+            <Select
+                id="transferPartSelect"
+                items="{transferParts>/items}"
+                forceSelection="false">
+
+                <core:Item
+                    key="{transferParts>ID}"
+                    text="{transferParts>partNumber} — {transferParts>description}"/>
+            </Select>
+
+            <Label text="To Location"/>
+
+            <Select
+                id="transferToSelect"
+                items="{/Locations}"
+                forceSelection="false">
+
+                <core:Item
+                    key="{ID}"
+                    text="{name} ({locationCode})"/>
+            </Select>
+
+            <Label text="Quantity"/>
+
+            <Input
+                id="transferQtyInput"
+                type="Number"
+                placeholder="e.g. 10"/>
+
+            <Label text="Reference"/>
+
+            <Input
+                id="transferRefInput"
+                placeholder="e.g. Rebalancing WH-HYD to WH-CHN"/>
+
+        </f:SimpleForm>
+
+        <Bar>
+            <contentRight>
+                <Button
+                    text="Create Transfer"
+                    type="Emphasized"
+                    press="onTransfer"/>
+            </contentRight>
+        </Bar>
+
+        <!-- FILTER BAR -->
+        <fb:FilterBar
+            id="transferFilterBar"
+            useToolbar="true"
+            showGoOnFB="true"
+            showClearOnFB="true"
+            search="onFilterSearch"
+            clear="onFilterClear"
+            showFilterConfiguration="false">
+
+            <fb:filterGroupItems>
+
+                <fb:FilterGroupItem
+                    name="FromLocation"
+                    label="From Location"
+                    groupName="Basic"
+                    visibleInFilterBar="true">
+
+                    <fb:control>
+                        <Input
+                            id="transferFromFilter"
+                            placeholder="Enter From Location"/>
+                    </fb:control>
+
+                </fb:FilterGroupItem>
+
+                <fb:FilterGroupItem
+                    name="ToLocation"
+                    label="To Location"
+                    groupName="Basic"
+                    visibleInFilterBar="true">
+
+                    <fb:control>
+                        <Input
+                            id="transferToFilter"
+                            placeholder="Enter To Location"/>
+                    </fb:control>
+
+                </fb:FilterGroupItem>
+
+                <fb:FilterGroupItem
+                    name="PartNumber"
+                    label="Part No."
+                    groupName="Basic"
+                    visibleInFilterBar="true">
+
+                    <fb:control>
+                        <Input
+                            id="transferPartFilter"
+                            placeholder="Enter Part No."/>
+                    </fb:control>
+
+                </fb:FilterGroupItem>
+
+                <!-- STATUS FILTER -->
+                <fb:FilterGroupItem
+                    name="Status"
+                    label="Status"
+                    groupName="Basic"
+                    visibleInFilterBar="true">
+
+                    <fb:control>
+                        <Select
+                            id="transferStatusFilter"
+                            selectedKey="">
+
+                            <core:Item
+                                key=""
+                                text="All"/>
+
+                            <core:Item
+                                key="PENDING"
+                                text="Pending"/>
+
+                            <core:Item
+                                key="APPROVED"
+                                text="Approved"/>
+
+                            <core:Item
+                                key="REJECTED"
+                                text="Rejected"/>
+
+                        </Select>
+                    </fb:control>
+
+                </fb:FilterGroupItem>
+
+            </fb:filterGroupItems>
+
+        </fb:FilterBar>
+
+        <!-- RECENT TRANSFERS -->
+        <Table
+            id="transferTable"
+            items="{
+                path: '/StockTransferRequests',
+                sorter: {
+                    path: 'createdAt',
+                    descending: true
+                }
+            }"
+            growing="true">
+
+            <headerToolbar>
+                <Toolbar>
+                    <Title text="Recent Transfers"/>
+                </Toolbar>
+            </headerToolbar>
+
+            <columns>
+                  <Column>
+        <Text text="Transaction ID"/>
+                </Column>
+
+                <Column>
+                    <Text text="Part"/>
+                </Column>
+
+                <Column>
+                    <Text text="From"/>
+                </Column>
+
+                <Column>
+                    <Text text="To"/>
+                </Column>
+
+                <Column>
+                    <Text text="Qty"/>
+                </Column>
+
+                <Column>
+                    <Text text="Status"/>
+                </Column>
+
+            </columns>
+
+            <items>
+
+                <ColumnListItem>
+
+                    <cells>
+                         <Text
+                             text="{ID}"/>
+
+                        <Text
+                            text="{part/partNumber}"/>
+
+                        <Text
+                            text="{fromLocation/name}"/>
+
+                        <Text
+                            text="{toLocation/name}"/>
+
+                        <Text
+                            text="{quantity}"/>
+
+                        <ObjectStatus
+                            text="{= ${status} ? ${status}.toUpperCase() : '' }"
+                            state="{= ${status} ? (${status}.toUpperCase() === 'APPROVED' ? 'Success' : ${status}.toUpperCase() === 'REJECTED' ? 'Error' : ${status}.toUpperCase() === 'PENDING' ? 'Warning' : 'None') : 'None' }"/>
+
+                    </cells>
+
+                </ColumnListItem>
+
+            </items>
+
+        </Table>
+
+    </content>
+
+</Page>
+
+
+</mvc:View>

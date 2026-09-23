@@ -1,0 +1,547 @@
+<mvc:View
+    controllerName="inventorytest.controller.Dashboard"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns:f="sap.f"
+    xmlns:viz="sap.viz.ui5.controls"
+    xmlns:viz.data="sap.viz.ui5.data"
+    xmlns:viz.feeds="sap.viz.ui5.controls.common.feeds"
+    xmlns:layout="sap.ui.layout"
+    xmlns:cssgrid="sap.ui.layout.cssgrid"
+    xmlns:core="sap.ui.core"
+    xmlns="sap.m">
+
+    <Page
+        id="dashboardPage"
+        showHeader="false">
+
+        <content>
+
+            <!-- =====================================================
+                 WELCOME HERO BANNER
+                 ===================================================== -->
+            <VBox class="sapUiSmallMargin">
+
+                <VBox class="welcomeBanner">
+
+                    <Title
+                        text="Welcome to Mobis Spare Parts"
+                        level="H1"
+                        class="welcomeTitle"/>
+
+                    <Text
+                        text="Track inventory, stock movements, and warehouse performance in one place."
+                        class="welcomeSubtitle"/>
+
+                </VBox>
+
+            </VBox>
+
+            <!-- =====================================================
+                 KPI AREA
+                 ===================================================== -->
+            <VBox
+                class="sapUiSmallMarginBeginEnd sapUiSmallMarginBottom">
+
+                <Title
+                    text="Inventory Overview"
+                    level="H2"
+                    class="sapUiTinyMarginBottom"/>
+
+                <f:GridList
+                    id="kpiGridList"
+                    items="{kpiTiles>/items}">
+
+                    <f:customLayout>
+
+                        <cssgrid:GridBoxLayout
+                            boxMinWidth="14rem"
+                            boxWidth="14rem"
+                            />
+
+                    </f:customLayout>
+
+                    <f:items>
+
+                        <CustomListItem
+                            type="Active"
+                            press="onKpiTilePress"
+                            class="kpiCard {kpiTiles>cssClass}">
+
+                            <HBox
+                                class="kpiCardInner">
+
+                                <core:Icon
+                                    src="{kpiTiles>icon}"
+                                    class="kpiIcon {kpiTiles>cssClass}Icon"/>
+
+                                <VBox>
+
+                                    <Text
+                                        text="{kpiTiles>title}"
+                                        class="kpiCardTitle"/>
+
+                                    <Text
+                                        text="{kpiTiles>subtitle}"
+                                        class="kpiCardSubtitle"/>
+
+                                    <Text
+                                        text="{kpiTiles>value}"
+                                        class="kpiCardValue {kpiTiles>cssClass}Value"/>
+
+                                    <Text
+                                        text="{kpiTiles>unit}"
+                                        class="kpiCardUnit"/>
+
+                                </VBox>
+
+                            </HBox>
+
+                        </CustomListItem>
+
+                    </f:items>
+
+                </f:GridList>
+
+            </VBox>
+
+
+            <!-- =====================================================
+                 ANALYTICS AREA
+                 ===================================================== -->
+            <VBox
+                class="sapUiSmallMarginBeginEnd sapUiSmallMarginBottom">
+
+                <Title
+                    text="Analytics"
+                    level="H2"
+                    class="sapUiTinyMarginBottom"/>
+
+                <layout:Grid
+                    defaultSpan="L6 M12 S12"
+                    hSpacing="1"
+                    vSpacing="1"
+                    width="100%">
+
+                    <!-- =================================================
+                         STOCK BY WAREHOUSE
+                         ================================================= -->
+                    <Panel
+                        id="warehousePanel">
+
+                        <headerToolbar>
+
+                            <Toolbar>
+
+                                <core:Icon
+                                    src="sap-icon://home"
+                                    class="panelHeaderIcon"/>
+
+                                <Title
+                                    text="{chartTitles>/warehouseTitle}"
+                                    level="H3"
+                                    class="sapUiTinyMarginBegin"/>
+
+                            </Toolbar>
+
+                        </headerToolbar>
+
+                        <content>
+
+                            <viz:VizFrame
+                                id="warehouseStockChart"
+                                uiConfig="{applicationSet:'fiori'}"
+                                height="360px"
+                                width="100%"
+                                vizType="bar"
+                                selectData="onWarehouseChartSelect"
+                                deselectData="onWarehouseChartDeselect">
+
+                                <viz:dataset>
+
+                                    <viz.data:FlattenedDataset
+                                        data="{warehouseStock>/items}">
+
+                                        <viz.data:dimensions>
+
+                                            <viz.data:DimensionDefinition
+                                                name="Warehouse"
+                                                value="{warehouseStock>warehouse}"/>
+
+                                        </viz.data:dimensions>
+
+                                        <viz.data:measures>
+
+                                            <viz.data:MeasureDefinition
+                                                name="Stock (Units)"
+                                                value="{warehouseStock>stock}"/>
+
+                                        </viz.data:measures>
+
+                                    </viz.data:FlattenedDataset>
+
+                                </viz:dataset>
+
+                                <viz:feeds>
+
+                                    <viz.feeds:FeedItem
+                                        uid="valueAxis"
+                                        type="Measure"
+                                        values="Stock (Units)"/>
+
+                                    <viz.feeds:FeedItem
+                                        uid="categoryAxis"
+                                        type="Dimension"
+                                        values="Warehouse"/>
+
+                                </viz:feeds>
+
+                            </viz:VizFrame>
+
+                        </content>
+
+                    </Panel>
+
+
+                    <!-- =================================================
+                         STOCK BY CATEGORY
+                         ================================================= -->
+                    <Panel
+                        id="categoryPanel">
+
+                        <headerToolbar>
+
+                            <Toolbar>
+
+                                <core:Icon
+                                    src="sap-icon://pie-chart"
+                                    class="panelHeaderIcon"/>
+
+                                <Title
+                                    text="Stock by Category"
+                                    level="H3"
+                                    class="sapUiTinyMarginBegin"/>
+
+                            </Toolbar>
+
+                        </headerToolbar>
+
+                        <content>
+
+                            <HBox
+                                width="100%"
+                                justifyContent="SpaceBetween">
+
+                                <VBox
+                                    class="donutWrapper"
+                                    width="320px">
+
+                                    <viz:VizFrame
+                                        id="categoryStockChart"
+                                        uiConfig="{applicationSet:'fiori'}"
+                                        height="320px"
+                                        width="320px"
+                                        vizType="donut"
+                                        selectData="onCategoryChartSelect"
+                                        deselectData="onCategoryChartDeselect">
+
+                                        <viz:dataset>
+
+                                            <viz.data:FlattenedDataset
+                                                data="{categoryStock>/items}">
+
+                                                <viz.data:dimensions>
+
+                                                    <viz.data:DimensionDefinition
+                                                        name="Category"
+                                                        value="{categoryStock>category}"/>
+
+                                                </viz.data:dimensions>
+
+                                                <viz.data:measures>
+
+                                                    <viz.data:MeasureDefinition
+                                                        name="Records"
+                                                        value="{categoryStock>count}"/>
+
+                                                </viz.data:measures>
+
+                                            </viz.data:FlattenedDataset>
+
+                                        </viz:dataset>
+
+                                        <viz:feeds>
+
+                                            <viz.feeds:FeedItem
+                                                uid="size"
+                                                type="Measure"
+                                                values="Records"/>
+
+                                            <viz.feeds:FeedItem
+                                                uid="color"
+                                                type="Dimension"
+                                                values="Category"/>
+
+                                        </viz:feeds>
+
+                                    </viz:VizFrame>
+
+                                    <VBox
+                                        class="donutCenterLabel">
+
+                                        <Text
+                                            text="{kpi>/total}"
+                                            class="donutCenterValue"/>
+
+                                        <Text
+                                            text="Total Items"
+                                            class="donutCenterUnit"/>
+
+                                    </VBox>
+
+                                </VBox>
+
+                                <VBox
+                                    width="260px"
+                                    class="legendList"
+                                    items="{categoryLegend>/items}">
+
+                                    <items>
+
+                                        <HBox
+                                            alignItems="Center"
+                                            class="legendRow">
+
+                                            <core:Icon
+                                                src="sap-icon://circle-task-2"
+                                                color="{categoryLegend>colorHex}"
+                                                class="legendSwatch"/>
+
+                                            <Text
+                                                text="{categoryLegend>category}"
+                                                class="legendLabel"/>
+
+                                            <Text
+                                                text="{categoryLegend>count}"
+                                                class="legendCount"/>
+
+                                        </HBox>
+
+                                    </items>
+
+                                </VBox>
+
+                            </HBox>
+
+                        </content>
+
+                    </Panel>
+
+                </layout:Grid>
+
+            </VBox>
+
+
+            <!-- =====================================================
+                 RECENT STOCK ISSUES
+                 ===================================================== -->
+            <VBox
+                class="sapUiSmallMarginBeginEnd sapUiSmallMarginBottom">
+
+                <Title
+                    text="Recent Stock Issues"
+                    level="H2"
+                    class="sapUiTinyMarginBottom"/>
+
+                <Panel
+                    id="recentIssuesPanel">
+
+                    <headerToolbar>
+
+                        <Toolbar>
+
+                            <core:Icon
+                                src="sap-icon://shipping-status"
+                                class="panelHeaderIcon"/>
+
+                            <Title
+                                text="Latest Issued Stock"
+                                level="H3"
+                                class="sapUiTinyMarginBegin"/>
+
+                            <ToolbarSpacer/>
+
+                            <Button
+                                icon="sap-icon://refresh"
+                                tooltip="Refresh recent stock issues"
+                                type="Transparent"
+                                press="onRefreshRecentIssues"/>
+
+                        </Toolbar>
+
+                    </headerToolbar>
+
+                    <content>
+
+                        <Table
+                            id="recentIssuesTable"
+                            growing="true"
+                            growingThreshold="10"
+                            noDataText="No stock issues found"
+                            items="{recentIssues>/items}">
+
+                            <columns>
+
+                                <Column>
+                                    <Text text="Part Number"/>
+                                </Column>
+
+                                <Column>
+                                    <Text text="Description"/>
+                                </Column>
+
+                                <Column>
+                                    <Text text="Location"/>
+                                </Column>
+
+                                <Column hAlign="End">
+                                    <Text text="Quantity Issued"/>
+                                </Column>
+
+                                <Column>
+                                    <Text text="Reference"/>
+                                </Column>
+
+                                <Column>
+                                    <Text text="Date / Time"/>
+                                </Column>
+
+                            </columns>
+
+                            <items>
+
+                                <ColumnListItem>
+
+                                    <cells>
+
+                                        <Text
+                                            text="{recentIssues>partNumber}"/>
+
+                                        <Text
+                                            text="{recentIssues>description}"/>
+
+                                        <Text
+                                            text="{recentIssues>locationName}"/>
+
+                                        <ObjectNumber
+                                            number="{recentIssues>quantity}"
+                                            unit="units"/>
+
+                                        <Text
+                                            text="{recentIssues>reference}"/>
+
+                                        <Text
+                                            text="{recentIssues>dateTime}"/>
+
+                                    </cells>
+
+                                </ColumnListItem>
+
+                            </items>
+
+                        </Table>
+
+                    </content>
+
+                </Panel>
+
+            </VBox>
+
+        </content>
+
+
+        <!-- =========================================================
+             CHART DRILL-DOWN POPOVER
+             ========================================================= -->
+        <dependents>
+
+            <Popover
+                id="chartDetailPopover"
+                title="{chartDetail>/title}"
+                placement="Auto"
+                contentWidth="400px"
+                contentMinWidth="320px">
+
+                <content>
+
+                    <Table
+                        id="chartDetailTable"
+                        growing="true"
+                        growingThreshold="10"
+                        noDataText="No parts found for this selection"
+                        items="{chartDetail>/items}">
+
+                        <columns>
+
+                            <Column>
+                                <Text text="Part"/>
+                            </Column>
+
+                            <Column>
+                                <Text text="Location"/>
+                            </Column>
+
+                            <Column hAlign="End">
+                                <Text text="Quantity"/>
+                            </Column>
+
+                        </columns>
+
+                        <items>
+
+                            <ColumnListItem>
+
+                                <cells>
+
+                                    <Text
+                                        text="{chartDetail>partNumber}"/>
+
+                                    <Text
+                                        text="{chartDetail>locationName}"/>
+
+                                    <ObjectNumber
+                                        number="{chartDetail>quantityOnHand}"
+                                        unit="units"/>
+
+                                </cells>
+
+                            </ColumnListItem>
+
+                        </items>
+
+                    </Table>
+
+                </content>
+
+                <footer>
+
+                    <Bar>
+
+                        <contentRight>
+
+                            <Button
+                                text="Close"
+                                press="onCloseChartDetail"/>
+
+                        </contentRight>
+
+                    </Bar>
+
+                </footer>
+
+            </Popover>
+
+        </dependents>
+
+    </Page>
+
+</mvc:View>
