@@ -28,7 +28,7 @@ service InventoryService @(path: '/inventory') {
 
 entity StockTransferRequests as projection on db.StockTransferRequests  actions {
        action  approveStockTransferRequest() returns String;
-       action rejectStockTransferRequest(rejectionReason:String) returns String;
+       action rejectStockTransferRequest() returns String;
        //action triggerApproval() returns StockTransferRequests;
     }
 

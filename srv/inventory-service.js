@@ -380,13 +380,10 @@ this.on('approveStockTransferRequest', async (req) => {
 
 
 this.on('rejectStockTransferRequest', 'StockTransferRequests', async (req) => {
-    const { rejectionReason } = req.data;
+   
     const requestID = req.params[0].ID;
 
-    if (!rejectionReason || !rejectionReason.trim()) {
-        return req.error(400, 'Rejection reason is required.');
-    }
-
+   
     const tx = cds.transaction(req);
 
     const request = await tx.run(
@@ -408,8 +405,7 @@ this.on('rejectStockTransferRequest', 'StockTransferRequests', async (req) => {
     await tx.run(
         UPDATE('mobis.db.StockTransferRequests')
             .set({
-                status: 'Rejected',
-                rejectionReason: rejectionReason.trim()
+                status: 'Rejected'
             })
             .where({ ID: requestID })
     );
