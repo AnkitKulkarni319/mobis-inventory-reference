@@ -23,16 +23,9 @@
                     press="onToggleSideNavigation"
                     class="appSidebarToggle"/>
 
-                <!-- MOBIS LOGO / AVATAR -->
-                <Avatar
-                    displaySize="S"
-                    initials="M"
-                    backgroundColor="Accent6"
-                    class="appLogoAvatar sapUiTinyMarginBegin"/>
-
-                <!-- APPLICATION TITLE -->
+                <!-- APPLICATION TITLE (M avatar removed) -->
                 <VBox
-                    class="appBrandBlock sapUiTinyMarginBegin">
+                    class="appBrandBlock sapUiSmallMarginBegin">
 
                     <Text
                         text="Mobis Spare Parts"

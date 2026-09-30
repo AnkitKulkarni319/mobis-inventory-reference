@@ -12,14 +12,15 @@
 
     <Page
         id="dashboardPage"
+        class="dashPage"
         showHeader="false">
 
         <content>
 
             <!-- =====================================================
-                 WELCOME HERO BANNER
+                 WELCOME HERO BANNER  (visual only; reuses {kpi>/total})
                  ===================================================== -->
-            <VBox class="sapUiSmallMargin">
+            <VBox class="dashSection dashSectionFirst">
 
                 <VBox class="welcomeBanner">
 
@@ -32,6 +33,11 @@
                         text="Track inventory, stock movements, and warehouse performance in one place."
                         class="welcomeSubtitle"/>
 
+                    <HBox class="welcomeChips" alignItems="Center">
+                        <core:Icon src="sap-icon://product" class="welcomeChipIcon"/>
+                        <Text text="{kpi>/total} items tracked" class="welcomeChipText"/>
+                    </HBox>
+
                 </VBox>
 
             </VBox>
@@ -39,23 +45,22 @@
             <!-- =====================================================
                  KPI AREA
                  ===================================================== -->
-            <VBox
-                class="sapUiSmallMarginBeginEnd sapUiSmallMarginBottom">
+            <VBox class="dashSection">
 
                 <Title
                     text="Inventory Overview"
                     level="H2"
-                    class="sapUiTinyMarginBottom"/>
+                    class="dashSectionTitle"/>
 
                 <f:GridList
                     id="kpiGridList"
+                    class="dashKpiGrid"
                     items="{kpiTiles>/items}">
 
                     <f:customLayout>
 
                         <cssgrid:GridBoxLayout
                             boxMinWidth="14rem"
-                            boxWidth="14rem"
                             />
 
                     </f:customLayout>
@@ -65,36 +70,55 @@
                         <CustomListItem
                             type="Active"
                             press="onKpiTilePress"
-                            class="kpiCard {kpiTiles>cssClass}">
+                            class="kpiCard">
 
-                            <HBox
-                                class="kpiCardInner">
+                            <customData>
+                                <core:CustomData
+                                    key="tone"
+                                    value="{kpiTiles>cssClass}"
+                                    writeToDom="true"/>
+                            </customData>
 
-                                <core:Icon
-                                    src="{kpiTiles>icon}"
-                                    class="kpiIcon {kpiTiles>cssClass}Icon"/>
+                            <VBox class="kpiCardInner">
 
-                                <VBox>
+                                <HBox
+                                    justifyContent="SpaceBetween"
+                                    alignItems="Start"
+                                    width="100%">
 
-                                    <Text
-                                        text="{kpiTiles>title}"
-                                        class="kpiCardTitle"/>
+                                    <VBox>
 
-                                    <Text
-                                        text="{kpiTiles>subtitle}"
-                                        class="kpiCardSubtitle"/>
+                                        <Text
+                                            text="{kpiTiles>title}"
+                                            class="kpiCardTitle"/>
+
+                                        <Text
+                                            text="{kpiTiles>subtitle}"
+                                            class="kpiCardSubtitle"/>
+
+                                    </VBox>
+
+                                    <core:Icon
+                                        src="{kpiTiles>icon}"
+                                        class="kpiIcon"/>
+
+                                </HBox>
+
+                                <HBox
+                                    alignItems="Baseline"
+                                    class="kpiValueRow">
 
                                     <Text
                                         text="{kpiTiles>value}"
-                                        class="kpiCardValue {kpiTiles>cssClass}Value"/>
+                                        class="kpiCardValue"/>
 
                                     <Text
                                         text="{kpiTiles>unit}"
                                         class="kpiCardUnit"/>
 
-                                </VBox>
+                                </HBox>
 
-                            </HBox>
+                            </VBox>
 
                         </CustomListItem>
 
@@ -108,13 +132,12 @@
             <!-- =====================================================
                  ANALYTICS AREA
                  ===================================================== -->
-            <VBox
-                class="sapUiSmallMarginBeginEnd sapUiSmallMarginBottom">
+            <VBox class="dashSection">
 
                 <Title
-                    text="Analytics"
+                    text="Stock Analytics"
                     level="H2"
-                    class="sapUiTinyMarginBottom"/>
+                    class="dashSectionTitle"/>
 
                 <layout:Grid
                     defaultSpan="L6 M12 S12"
@@ -122,18 +145,17 @@
                     vSpacing="1"
                     width="100%">
 
-                    <!-- =================================================
-                         STOCK BY WAREHOUSE
-                         ================================================= -->
+                    <!-- STOCK BY WAREHOUSE -->
                     <Panel
-                        id="warehousePanel">
+                        id="warehousePanel"
+                        class="dashPanel">
 
                         <headerToolbar>
 
-                            <Toolbar>
+                            <Toolbar class="dashPanelToolbar">
 
                                 <core:Icon
-                                    src="sap-icon://home"
+                                    src="sap-icon://bar-chart"
                                     class="panelHeaderIcon"/>
 
                                 <Title
@@ -202,15 +224,14 @@
                     </Panel>
 
 
-                    <!-- =================================================
-                         STOCK BY CATEGORY
-                         ================================================= -->
+                    <!-- STOCK BY CATEGORY -->
                     <Panel
-                        id="categoryPanel">
+                        id="categoryPanel"
+                        class="dashPanel">
 
                         <headerToolbar>
 
-                            <Toolbar>
+                            <Toolbar class="dashPanelToolbar">
 
                                 <core:Icon
                                     src="sap-icon://pie-chart"
@@ -229,7 +250,9 @@
 
                             <HBox
                                 width="100%"
-                                justifyContent="SpaceBetween">
+                                wrap="Wrap"
+                                alignItems="Center"
+                                justifyContent="SpaceAround">
 
                                 <VBox
                                     class="donutWrapper"
@@ -300,31 +323,45 @@
 
                                 </VBox>
 
+                                <!-- Legend: same bindings + share-of-total bar (computed from existing values) -->
                                 <VBox
-                                    width="260px"
                                     class="legendList"
                                     items="{categoryLegend>/items}">
 
                                     <items>
 
-                                        <HBox
-                                            alignItems="Center"
-                                            class="legendRow">
+                                        <VBox class="legendItem">
 
-                                            <core:Icon
-                                                src="sap-icon://circle-task-2"
-                                                color="{categoryLegend>colorHex}"
-                                                class="legendSwatch"/>
+                                            <HBox
+                                                alignItems="Center"
+                                                class="legendRow">
 
-                                            <Text
-                                                text="{categoryLegend>category}"
-                                                class="legendLabel"/>
+                                                <core:Icon
+                                                    src="sap-icon://circle-task-2"
+                                                    color="{categoryLegend>colorHex}"
+                                                    class="legendSwatch"/>
 
-                                            <Text
-                                                text="{categoryLegend>count}"
-                                                class="legendCount"/>
+                                                <Text
+                                                    text="{categoryLegend>category}"
+                                                    class="legendLabel"/>
 
-                                        </HBox>
+                                                <Text
+                                                    text="{= ${kpi>/total} ? Math.round(${categoryLegend>count} * 1000 / ${kpi>/total}) / 10 : 0 }%"
+                                                    class="legendPct"/>
+
+                                                <Text
+                                                    text="{categoryLegend>count}"
+                                                    class="legendCount"/>
+
+                                            </HBox>
+
+                                            <ProgressIndicator
+                                                class="legendBar"
+                                                showValue="false"
+                                                height="0.3rem"
+                                                percentValue="{= ${kpi>/total} ? Math.round(${categoryLegend>count} * 100 / ${kpi>/total}) : 0 }"/>
+
+                                        </VBox>
 
                                     </items>
 
@@ -342,25 +379,175 @@
 
 
             <!-- =====================================================
-                 RECENT STOCK ISSUES
+                 ACTION CENTER  (uses existing models + handlers only)
+                 lowStockList>/items  |  onNavLowStock, onNavInventory,
+                 onNavIssue, onNavTransfer, onNavHealthy
                  ===================================================== -->
-            <VBox
-                class="sapUiSmallMarginBeginEnd sapUiSmallMarginBottom">
+            <VBox class="dashSection">
 
                 <Title
-                    text="Recent Stock Issues"
+                    text="Action Center"
                     level="H2"
-                    class="sapUiTinyMarginBottom"/>
+                    class="dashSectionTitle"/>
+
+                <layout:Grid
+                    defaultSpan="L6 M12 S12"
+                    hSpacing="1"
+                    vSpacing="1"
+                    width="100%">
+
+                    <Panel
+                        id="attentionPanel"
+                        class="dashPanel">
+
+                        <headerToolbar>
+                            <Toolbar class="dashPanelToolbar">
+                                <core:Icon src="sap-icon://alert" class="panelHeaderIcon"/>
+                                <Title text="Needs Attention" level="H3" class="sapUiTinyMarginBegin"/>
+                                <ToolbarSpacer/>
+                                <Button text="View all" type="Transparent" press="onNavLowStock"/>
+                            </Toolbar>
+                        </headerToolbar>
+
+                        <content>
+                            <List
+                                id="attentionList"
+                                class="attnList"
+                                growing="true"
+                                growingThreshold="5"
+                                noDataText="All stock levels are healthy"
+                                items="{lowStockList>/items}">
+
+                                <CustomListItem class="attnItem">
+
+                                    <customData>
+                                        <core:CustomData key="status" value="{lowStockList>status}" writeToDom="true"/>
+                                    </customData>
+
+                                    <VBox class="attnBox">
+
+                                        <HBox justifyContent="SpaceBetween" alignItems="Center">
+                                            <VBox>
+                                                <Text text="{lowStockList>partNumber}" class="attnPart"/>
+                                                <Text text="{lowStockList>description} · {lowStockList>locationName}" class="attnMeta"/>
+                                            </VBox>
+                                            <ObjectStatus
+                                                text="{lowStockList>status}"
+                                                inverted="true"
+                                                state="{= ${lowStockList>status} === 'Out of Stock' ? 'Error' : 'Warning'}"/>
+                                        </HBox>
+
+                                        <ProgressIndicator
+                                            class="attnBar"
+                                            showValue="false"
+                                            height="0.4rem"
+                                            percentValue="{= ${lowStockList>reorderLevel} ? Math.min(100, Math.round(${lowStockList>quantityOnHand} * 100 / ${lowStockList>reorderLevel})) : 0}"/>
+
+                                        <Text text="{lowStockList>quantityOnHand} on hand · reorder at {lowStockList>reorderLevel}" class="attnMeta"/>
+
+                                    </VBox>
+
+                                </CustomListItem>
+
+                            </List>
+                        </content>
+
+                    </Panel>
+
+                    <Panel
+                        id="quickActionsPanel"
+                        class="dashPanel">
+
+                        <headerToolbar>
+                            <Toolbar class="dashPanelToolbar">
+                                <core:Icon src="sap-icon://action" class="panelHeaderIcon"/>
+                                <Title text="Quick Actions" level="H3" class="sapUiTinyMarginBegin"/>
+                            </Toolbar>
+                        </headerToolbar>
+
+                        <content>
+                            <f:GridList
+                                id="quickActionsGrid"
+                                class="actionGridList">
+
+                                <f:customLayout>
+                                    <cssgrid:GridBoxLayout boxMinWidth="11rem"/>
+                                </f:customLayout>
+
+                                <f:items>
+
+                                    <CustomListItem type="Active" press="onNavInventory" class="actionCard">
+                                        <HBox alignItems="Center" class="actionCardInner">
+                                            <core:Icon src="sap-icon://list" class="actionCardIcon"/>
+                                            <VBox>
+                                                <Text text="Inventory List" class="actionCardTitle"/>
+                                                <Text text="Browse all stock" class="actionCardSub"/>
+                                            </VBox>
+                                        </HBox>
+                                    </CustomListItem>
+
+                                    <CustomListItem type="Active" press="onNavIssue" class="actionCard actionCardPrimary">
+                                        <HBox alignItems="Center" class="actionCardInner">
+                                            <core:Icon src="sap-icon://outbox" class="actionCardIcon"/>
+                                            <VBox>
+                                                <Text text="Issue Stock" class="actionCardTitle"/>
+                                                <Text text="Record an issue" class="actionCardSub"/>
+                                            </VBox>
+                                        </HBox>
+                                    </CustomListItem>
+
+                                    <CustomListItem type="Active" press="onNavTransfer" class="actionCard">
+                                        <HBox alignItems="Center" class="actionCardInner">
+                                            <core:Icon src="sap-icon://shipping-status" class="actionCardIcon"/>
+                                            <VBox>
+                                                <Text text="Stock Transfer" class="actionCardTitle"/>
+                                                <Text text="Move between sites" class="actionCardSub"/>
+                                            </VBox>
+                                        </HBox>
+                                    </CustomListItem>
+
+                                    <CustomListItem type="Active" press="onNavHealthy" class="actionCard">
+                                        <HBox alignItems="Center" class="actionCardInner">
+                                            <core:Icon src="sap-icon://accept" class="actionCardIcon"/>
+                                            <VBox>
+                                                <Text text="Healthy Stock" class="actionCardTitle"/>
+                                                <Text text="Above reorder level" class="actionCardSub"/>
+                                            </VBox>
+                                        </HBox>
+                                    </CustomListItem>
+
+                                </f:items>
+
+                            </f:GridList>
+                        </content>
+
+                    </Panel>
+
+                </layout:Grid>
+
+            </VBox>
+
+
+            <!-- =====================================================
+                 RECENT STOCK ISSUES
+                 ===================================================== -->
+            <VBox class="dashSection dashSectionLast">
+
+                <Title
+                    text="Recent Activity"
+                    level="H2"
+                    class="dashSectionTitle"/>
 
                 <Panel
-                    id="recentIssuesPanel">
+                    id="recentIssuesPanel"
+                    class="dashPanel">
 
                     <headerToolbar>
 
-                        <Toolbar>
+                        <Toolbar class="dashPanelToolbar">
 
                             <core:Icon
-                                src="sap-icon://shipping-status"
+                                src="sap-icon://history"
                                 class="panelHeaderIcon"/>
 
                             <Title
@@ -384,6 +571,7 @@
 
                         <Table
                             id="recentIssuesTable"
+                            class="recentTable"
                             growing="true"
                             growingThreshold="10"
                             noDataText="No stock issues found"
@@ -395,11 +583,11 @@
                                     <Text text="Part Number"/>
                                 </Column>
 
-                                <Column>
+                                <Column minScreenWidth="Tablet" demandPopin="true">
                                     <Text text="Description"/>
                                 </Column>
 
-                                <Column>
+                                <Column minScreenWidth="Tablet" demandPopin="true">
                                     <Text text="Location"/>
                                 </Column>
 
@@ -407,11 +595,11 @@
                                     <Text text="Quantity Issued"/>
                                 </Column>
 
-                                <Column>
+                                <Column minScreenWidth="Desktop" demandPopin="true">
                                     <Text text="Reference"/>
                                 </Column>
 
-                                <Column>
+                                <Column minScreenWidth="Tablet" demandPopin="true">
                                     <Text text="Date / Time"/>
                                 </Column>
 
@@ -423,8 +611,8 @@
 
                                     <cells>
 
-                                        <Text
-                                            text="{recentIssues>partNumber}"/>
+                                        <ObjectIdentifier
+                                            title="{recentIssues>partNumber}"/>
 
                                         <Text
                                             text="{recentIssues>description}"/>
@@ -434,7 +622,9 @@
 
                                         <ObjectNumber
                                             number="{recentIssues>quantity}"
-                                            unit="units"/>
+                                            unit="units"
+                                            emphasized="true"
+                                            state="Information"/>
 
                                         <Text
                                             text="{recentIssues>reference}"/>
@@ -460,7 +650,7 @@
 
 
         <!-- =========================================================
-             CHART DRILL-DOWN POPOVER
+             CHART DRILL-DOWN POPOVER (unchanged)
              ========================================================= -->
         <dependents>
 

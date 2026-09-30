@@ -7,172 +7,205 @@
 
     <Page
         id="inventoryListPage"
+        class="pgPage"
         title="Inventory List"
         showNavButton="true"
         navButtonPress="onNavBack">
 
         <content>
 
-            <!-- ===================================================== -->
-            <!-- FILTER BAR                                            -->
-            <!-- ===================================================== -->
+            <VBox class="pgBody">
 
-            <fb:FilterBar
-                id="inventoryFilterBar"
-                useToolbar="true"
-                showGoOnFB="true"
-                showClearOnFB="true"
-                search="onFilterSearch"
-                clear="onFilterClear"
-                showFilterConfiguration="false">
+                <Text
+                    text="Browse stock by location and part. Use the filters to narrow the list."
+                    class="pgIntro"/>
 
-                <fb:filterGroupItems>
+                <!-- FILTER BAR -->
+                <VBox class="pgCard pgFilter">
 
-                    <!-- LOCATION FILTER -->
-                    <fb:FilterGroupItem
-                        id="locationFilterItem"
-                        name="Location"
-                        label="Location"
-                        groupName="inventoryFilters"
-                        visibleInFilterBar="true">
+                    <Toolbar class="dashPanelToolbar">
+                        <core:Icon src="sap-icon://filter" class="panelHeaderIcon"/>
+                        <Title text="Filters" level="H3" class="sapUiTinyMarginBegin"/>
+                    </Toolbar>
 
-                        <fb:control>
+                    <fb:FilterBar
+                        id="inventoryFilterBar"
+                        useToolbar="true"
+                        showGoOnFB="true"
+                        showClearOnFB="true"
+                        search="onFilterSearch"
+                        clear="onFilterClear"
+                        showFilterConfiguration="false">
 
-                            <Select
-                                id="locationFilterSelect"
-                                width="100%"
-                                selectedKey=""
-                                forceSelection="false"
-                                change="onLocationFilterChange"
-                                items="{inventoryList>/locations}">
+                        <fb:filterGroupItems>
 
-                                <!-- EMPTY DEFAULT OPTION -->
-                                <core:Item
-                                    key=""
-                                    text="All Locations"/>
+                            <!-- LOCATION FILTER -->
+                            <fb:FilterGroupItem
+                                id="locationFilterItem"
+                                name="Location"
+                                label="Location"
+                                groupName="inventoryFilters"
+                                visibleInFilterBar="true">
 
-                                <!-- DYNAMIC LOCATIONS -->
-                                <core:Item
-                                    key="{inventoryList>key}"
-                                    text="{inventoryList>text}"/>
+                                <fb:control>
 
-                            </Select>
+                                    <Select
+                                        id="locationFilterSelect"
+                                        width="100%"
+                                        selectedKey=""
+                                        forceSelection="false"
+                                        change="onLocationFilterChange"
+                                        items="{inventoryList>/locations}">
 
-                        </fb:control>
+                                        <core:Item
+                                            key=""
+                                            text="All Locations"/>
 
-                    </fb:FilterGroupItem>
+                                        <core:Item
+                                            key="{inventoryList>key}"
+                                            text="{inventoryList>text}"/>
 
+                                    </Select>
 
-                    <!-- PART NUMBER FILTER -->
-                    <fb:FilterGroupItem
-                        id="partFilterItem"
-                        name="PartNumber"
-                        label="Part No."
-                        groupName="inventoryFilters"
-                        visibleInFilterBar="true">
+                                </fb:control>
 
-                        <fb:control>
-
-                            <Select
-                                id="partFilterSelect"
-                                width="100%"
-                                selectedKey=""
-                                forceSelection="false"
-                                items="{inventoryList>/filterParts}">
-
-                                <!-- EMPTY DEFAULT OPTION -->
-                                <core:Item
-                                    key=""
-                                    text="All Parts"/>
-
-                                <!-- DYNAMIC PART NUMBERS -->
-                                <core:Item
-                                    key="{inventoryList>partNumber}"
-                                    text="{inventoryList>partNumber}"/>
-
-                            </Select>
-
-                        </fb:control>
-
-                    </fb:FilterGroupItem>
-
-                </fb:filterGroupItems>
-
-            </fb:FilterBar>
+                            </fb:FilterGroupItem>
 
 
-            <!-- ===================================================== -->
-            <!-- INVENTORY TABLE                                        -->
-            <!-- ===================================================== -->
+                            <!-- PART NUMBER FILTER -->
+                            <fb:FilterGroupItem
+                                id="partFilterItem"
+                                name="PartNumber"
+                                label="Part No."
+                                groupName="inventoryFilters"
+                                visibleInFilterBar="true">
 
-            <Table
-                id="invTable"
-                growing="true"
-                growingThreshold="20"
-                noDataText="No inventory records found"
-                items="{inventoryList>/items}">
+                                <fb:control>
 
-                <columns>
+                                    <Select
+                                        id="partFilterSelect"
+                                        width="100%"
+                                        selectedKey=""
+                                        forceSelection="false"
+                                        items="{inventoryList>/filterParts}">
 
-                    <Column>
-                        <Text text="Location"/>
-                    </Column>
+                                        <core:Item
+                                            key=""
+                                            text="All Parts"/>
 
-                    <Column>
-                        <Text text="Part No."/>
-                    </Column>
+                                        <core:Item
+                                            key="{inventoryList>partNumber}"
+                                            text="{inventoryList>partNumber}"/>
 
-                    <Column>
-                        <Text text="Description"/>
-                    </Column>
+                                    </Select>
 
-                    <Column>
-                        <Text text="On Hand"/>
-                    </Column>
+                                </fb:control>
 
-                    <Column>
-                        <Text text="Reorder Level"/>
-                    </Column>
+                            </fb:FilterGroupItem>
 
-                    <Column>
-                        <Text text="Status"/>
-                    </Column>
+                        </fb:filterGroupItems>
 
-                </columns>
+                    </fb:FilterBar>
+
+                </VBox>
 
 
-                <items>
+                <!-- INVENTORY TABLE -->
+                <VBox class="pgCard">
 
-                    <ColumnListItem>
+                    <Toolbar class="dashPanelToolbar">
+                        <core:Icon src="sap-icon://list" class="panelHeaderIcon"/>
+                        <Title text="Inventory Records" level="H3" class="sapUiTinyMarginBegin"/>
+                        <ToolbarSpacer/>
+                        <Text text="{= ${inventoryList>/items}.length} records" class="pgMuted"/>
+                    </Toolbar>
 
-                        <cells>
+                    <Table
+                        id="invTable"
+                        class="recentTable"
+                        growing="true"
+                        growingThreshold="20"
+                        noDataText="No inventory records found"
+                        items="{inventoryList>/items}">
 
-                            <Text
-                                text="{inventoryList>locationName}"/>
+                        <columns>
 
-                            <Text
-                                text="{inventoryList>partNumber}"/>
+                            <Column>
+                                <Text text="Location"/>
+                            </Column>
 
-                            <Text
-                                text="{inventoryList>description}"/>
+                            <Column>
+                                <Text text="Part No."/>
+                            </Column>
 
-                            <Text
-                                text="{inventoryList>quantityOnHand}"/>
+                            <Column minScreenWidth="Tablet" demandPopin="true">
+                                <Text text="Description"/>
+                            </Column>
 
-                            <Text
-                                text="{inventoryList>reorderLevel}"/>
+                            <Column hAlign="End">
+                                <Text text="On Hand"/>
+                            </Column>
 
-                            <ObjectStatus
-                                text="{inventoryList>status}"
-                                state="{inventoryList>statusState}"/>
+                            <Column hAlign="End" minScreenWidth="Tablet" demandPopin="true">
+                                <Text text="Reorder Level"/>
+                            </Column>
 
-                        </cells>
+                            <Column>
+                                <Text text="Status"/>
+                            </Column>
 
-                    </ColumnListItem>
+                        </columns>
 
-                </items>
+                        <items>
 
-            </Table>
+                            <ColumnListItem class="invRow">
+
+                                <customData>
+                                    <core:CustomData key="state" value="{inventoryList>statusState}" writeToDom="true"/>
+                                </customData>
+
+                                <cells>
+
+                                    <Text
+                                        text="{inventoryList>locationName}"/>
+
+                                    <ObjectIdentifier
+                                        title="{inventoryList>partNumber}"/>
+
+                                    <Text
+                                        text="{inventoryList>description}"/>
+
+                                    <HBox alignItems="Center" justifyContent="End" class="stockCell">
+                                        <Text
+                                            text="{inventoryList>quantityOnHand}"
+                                            class="pgNum"/>
+                                        <ProgressIndicator
+                                            class="stockBar"
+                                            showValue="false"
+                                            width="4.5rem"
+                                            height="0.4rem"
+                                            percentValue="{= ${inventoryList>reorderLevel} ? Math.min(100, Math.round(${inventoryList>quantityOnHand} * 100 / ${inventoryList>reorderLevel})) : 100 }"/>
+                                    </HBox>
+
+                                    <Text
+                                        text="{inventoryList>reorderLevel}"/>
+
+                                    <ObjectStatus
+                                        text="{inventoryList>status}"
+                                        inverted="true"
+                                        state="{inventoryList>statusState}"/>
+
+                                </cells>
+
+                            </ColumnListItem>
+
+                        </items>
+
+                    </Table>
+
+                </VBox>
+
+            </VBox>
 
         </content>
 
