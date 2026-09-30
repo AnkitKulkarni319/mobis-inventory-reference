@@ -26,6 +26,7 @@ modules:
     requires:
       - name: mobis-spare-parts-portal-auth
       - name: mobis-spare-parts-portal-db
+      - name: mobis-spare-parts-portal-destination
 
   - name: mobis-spare-parts-portal-db-deployer
     type: hdb
@@ -103,3 +104,7 @@ resources:
     parameters:
       service: hana
       service-plan: hdi-shared
+  - name: mobis-spare-parts-portal-destination
+    type: org.cloudfoundry.existing-service
+    parameters:
+      service-name: mobis-spare-parts-portal-destination

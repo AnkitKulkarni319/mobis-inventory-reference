@@ -7,6 +7,7 @@
   },
   "dependencies": {
     "@cap-js/hana": "^2",
+    "@sap-cloud-sdk/http-client": "^4.9.1",
     "@sap/cds": "^9",
     "@sap/xssec": "^4",
     "express": "^4"
@@ -39,8 +40,9 @@
         "db": {
           "kind": "hana"
         },
-        "auth": "xsuaa"
-      }
+        "auth": "dummy"
+      },
+      "destinations": true
     }
   }
 }
