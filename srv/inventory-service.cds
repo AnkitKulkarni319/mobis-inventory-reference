@@ -43,6 +43,16 @@ entity StockTransferRequests as projection on db.StockTransferRequests  actions 
 
   action generateDailyInventorySummary() returns String;
 
+
+
+
+
+
+
+
   @readonly
 entity ApplicationLogs as projection on db.ApplicationLogs;
 }
+
+
+
