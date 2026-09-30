@@ -75,7 +75,7 @@ resources:
                 Authentication: NoAuthentication
                 ProxyType: Internet
                 Type: HTTP
-                URL: https://768a1648trial-dev-mobis-spare-parts-portal-srv.cfapps.us10-001.hana.ondemand.com
+                URL: https://3c318b49trial-dev-mobis-spare-parts-portal-srv.cfapps.us10-001.hana.ondemand.com
 
               - Name: ui5
                 Authentication: NoAuthentication

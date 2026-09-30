@@ -1,4 +1,3 @@
-
 # yaml-language-server: $schema=https://sap.github.io/ui5-tooling/schema/ui5.yaml.json
 
 specVersion: "4.0"
@@ -42,9 +41,8 @@ server:
         ignoreCertErrors: false
         backend:
           - path: /inventory
-            url: https://768a1648trial-dev-mobis-spare-parts-portal-srv.cfapps.us10-001.hana.ondemand.com
+            url: https://3c318b49trial-dev-mobis-spare-parts-portal-srv.cfapps.us10-001.hana.ondemand.com
             destination: Inventory_project_Test
-
     - name: sap-fe-mockserver
       beforeMiddleware: csp
       configuration:
