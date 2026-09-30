@@ -453,7 +453,7 @@ this.on('generateDailyInventorySummary', async (req) => {
             m.movementType === 'TRANSFER');
   });
 
-  const summary = {
+  const summary = { 
     date: startOfDay.toISOString().slice(0, 10),
 
     totalMovements: dailyMovements.length,
