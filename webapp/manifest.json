@@ -137,7 +137,14 @@
           "target": [
             "StockTransfer"
           ]
-        }
+        },
+        {
+  "name": "purchaseRequisitions",
+  "pattern": "purchase-requisitions",
+  "target": [
+    "PurchaseRequisitions"
+  ]
+}
       ],
       "targets": {
         "Dashboard": {
@@ -155,7 +162,11 @@
         "StockTransfer": {
           "id": "StockTransfer",
           "name": "StockTransfer"
-        }
+        },
+        "PurchaseRequisitions": {
+  "id": "PurchaseRequisitions",
+  "name": "PurchaseRequisitions"
+}
       }
     },
     "rootView": {

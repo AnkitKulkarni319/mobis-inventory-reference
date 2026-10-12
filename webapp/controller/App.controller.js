@@ -42,6 +42,11 @@ sap.ui.define([
 
         transfer: {
             route: "transfer"
+        },
+
+        // Key matches the route name so the sidebar highlight follows it.
+        purchaseRequisitions: {
+            route: "purchaseRequisitions"
         }
     };
 

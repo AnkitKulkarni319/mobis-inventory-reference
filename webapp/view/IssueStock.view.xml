@@ -1,10 +1,10 @@
+
 <mvc:View
-    controllerName="inventorytest.controller.IssueStock"
     xmlns:mvc="sap.ui.core.mvc"
     xmlns:f="sap.ui.layout.form"
     xmlns:core="sap.ui.core"
-    xmlns:fb="sap.ui.comp.filterbar"
-    xmlns="sap.m">
+    xmlns="sap.m"
+    controllerName="inventorytest.controller.IssueStock">
 
     <Page
         class="pgPage"
@@ -13,7 +13,6 @@
         navButtonPress="onNavBack">
 
         <content>
-
             <VBox class="pgBody">
 
                 <Text
@@ -24,8 +23,14 @@
                 <VBox class="pgCard">
 
                     <Toolbar class="dashPanelToolbar">
-                        <core:Icon src="sap-icon://outbox" class="panelHeaderIcon"/>
-                        <Title text="Issue Details" level="H3" class="sapUiTinyMarginBegin"/>
+                        <core:Icon
+                            src="sap-icon://outbox"
+                            class="panelHeaderIcon"/>
+
+                        <Title
+                            text="Issue Details"
+                            level="H3"
+                            class="sapUiTinyMarginBegin"/>
                     </Toolbar>
 
                     <f:SimpleForm
@@ -43,10 +48,10 @@
                         columnsL="2"
                         columnsM="1">
 
-                        <core:Title text="1 · Stock Source &amp; Part Details"/>
+                        <core:Title
+                            text="1 · Stock Source &amp; Part Details"/>
 
-                        <Label
-                            text="From Warehouse"/>
+                        <Label text="From Warehouse"/>
 
                         <Select
                             id="issueLocSelect"
@@ -58,12 +63,9 @@
                             <core:Item
                                 key="{ID}"
                                 text="{name} ({locationCode})"/>
-
                         </Select>
 
-
-                        <Label
-                            text="Spare Part"/>
+                        <Label text="Spare Part"/>
 
                         <Select
                             id="issuePartSelect"
@@ -74,31 +76,52 @@
                             <core:Item
                                 key="{issueParts>ID}"
                                 text="{issueParts>partNumber} — {issueParts>description}"/>
-
                         </Select>
 
+                        <core:Title
+                            text="2 · Issue Quantity &amp; Reference"/>
 
-                        <core:Title text="2 · Issue Quantity &amp; Reference"/>
-
-                        <Label
-                            text="Quantity"/>
+                        <Label text="Quantity"/>
 
                         <Input
                             id="issueQtyInput"
                             type="Number"
                             placeholder="e.g. 5"/>
 
-
-                        <Label
-                            text="Reference"/>
+                        <Label text="Reference"/>
 
                         <Input
                             id="issueRefInput"
                             placeholder="e.g. Service Order SO-2001"/>
 
+                        <Label
+                            text="Service Center"
+                            required="true"/>
+
+                        <Select
+                            id="issueServiceCenterSelect"
+                            width="100%"
+                            forceSelection="false"
+                            selectedKey=""
+                            items="{
+                                path: '/ServiceCenters',
+                                filters: [{
+                                    path: 'isActive',
+                                    operator: 'EQ',
+                                    value1: true
+                                }]
+                            }">
+
+                            <core:Item
+                                key="{ID}"
+                                text="{name} ({serviceCenterCode})"/>
+                        </Select>
+
                     </f:SimpleForm>
 
-                    <HBox justifyContent="End" class="pgActions">
+                    <HBox
+                        justifyContent="End"
+                        class="pgActions">
 
                         <Button
                             text="Cancel"
@@ -110,23 +133,21 @@
                             type="Emphasized"
                             class="pgPrimaryBtn"
                             press="onIssueStock"/>
-
                     </HBox>
 
                 </VBox>
 
-
-                <!-- RECENT STOCK ISSUES -->
+                <!-- SERVICE CENTER ISSUES & RECONCILIATION -->
                 <VBox class="pgCard">
 
                     <Toolbar class="dashPanelToolbar">
 
                         <core:Icon
-                            src="sap-icon://history"
+                            src="sap-icon://action-settings"
                             class="panelHeaderIcon"/>
 
                         <Title
-                            text="Recent Stock Issues"
+                            text="Service Center Issues &amp; Reconciliation"
                             level="H3"
                             class="sapUiTinyMarginBegin"/>
 
@@ -135,159 +156,118 @@
                         <Button
                             icon="sap-icon://refresh"
                             type="Transparent"
-                            tooltip="Refresh recent stock issues"
-                            press="onRefreshRecentIssues"/>
-
+                            tooltip="Refresh service center issues"
+                            press="onRefreshServiceIssues"/>
                     </Toolbar>
 
-
-                    <fb:FilterBar
-                        id="issueFilterBar"
-                        useToolbar="true"
-                        showGoOnFB="true"
-                        showClearOnFB="true"
-                        search="onFilterSearch"
-                        clear="onFilterClear"
-                        showFilterConfiguration="false">
-
-                        <fb:filterGroupItems>
-
-                            <!-- LOCATION FILTER -->
-                            <fb:FilterGroupItem
-                                id="issueLocationFilterItem"
-                                name="IssueLocation"
-                                label="Location"
-                                groupName="issueFilters"
-                                visibleInFilterBar="true">
-
-                                <fb:control>
-
-                                    <Select
-                                        id="issueLocationFilterSelect"
-                                        width="100%"
-                                        selectedKey=""
-                                        forceSelection="false"
-                                        change="onIssueFilterLocationChange"
-                                        items="{recentIssues>/locations}">
-
-                                        <core:Item
-                                            key=""
-                                            text="All Locations"/>
-
-                                        <core:Item
-                                            key="{recentIssues>key}"
-                                            text="{recentIssues>text}"/>
-
-                                    </Select>
-
-                                </fb:control>
-
-                            </fb:FilterGroupItem>
-
-
-                            <!-- PART NUMBER FILTER -->
-                            <fb:FilterGroupItem
-                                id="issuePartFilterItem"
-                                name="IssuePartNumber"
-                                label="Part No."
-                                groupName="issueFilters"
-                                visibleInFilterBar="true">
-
-                                <fb:control>
-
-                                    <Select
-                                        id="issuePartFilterSelect"
-                                        width="100%"
-                                        selectedKey=""
-                                        forceSelection="false"
-                                        items="{recentIssues>/filterParts}">
-
-                                        <core:Item
-                                            key=""
-                                            text="All Parts"/>
-
-                                        <core:Item
-                                            key="{recentIssues>partNumber}"
-                                            text="{recentIssues>partNumber}"/>
-
-                                    </Select>
-
-                                </fb:control>
-
-                            </fb:FilterGroupItem>
-
-                        </fb:filterGroupItems>
-
-                    </fb:FilterBar>
-
-
                     <Table
-                        id="issueRecentIssuesTable"
+                        id="serviceIssuesTable"
                         class="recentTable"
                         growing="true"
                         growingThreshold="10"
-                        noDataText="No stock issues found"
-                        items="{recentIssues>/items}">
+                        noDataText="No service center issues found"
+                        items="{serviceIssues>/items}">
 
                         <columns>
-
                             <Column>
-                                <Text text="Part Number"/>
+                                <Text text="Service Center"/>
                             </Column>
 
-                            <Column minScreenWidth="Tablet" demandPopin="true">
-                                <Text text="Description"/>
+                            <Column
+                                minScreenWidth="Tablet"
+                                demandPopin="true">
+                                <Text text="Part"/>
                             </Column>
 
-                            <Column minScreenWidth="Tablet" demandPopin="true">
-                                <Text text="Location"/>
+                            <Column
+                                minScreenWidth="Desktop"
+                                demandPopin="true">
+                                <Text text="Warehouse"/>
                             </Column>
 
                             <Column hAlign="End">
-                                <Text text="Quantity"/>
+                                <Text text="Issued"/>
                             </Column>
 
-                            <Column minScreenWidth="Desktop" demandPopin="true">
-                                <Text text="Reference"/>
+                            <Column
+                                hAlign="End"
+                                minScreenWidth="Tablet"
+                                demandPopin="true">
+                                <Text text="Consumed"/>
                             </Column>
 
-                            <Column minScreenWidth="Tablet" demandPopin="true">
-                                <Text text="Date / Time"/>
+                            <Column
+                                hAlign="End"
+                                minScreenWidth="Tablet"
+                                demandPopin="true">
+                                <Text text="Returned"/>
                             </Column>
 
+                            <Column
+                                hAlign="End"
+                                minScreenWidth="Tablet"
+                                demandPopin="true">
+                                <Text text="Defective"/>
+                            </Column>
+
+                            <Column>
+                                <Text text="Status"/>
+                            </Column>
+
+                            <Column
+                                minScreenWidth="Desktop"
+                                demandPopin="true">
+                                <Text text="Issued On"/>
+                            </Column>
+
+                            <Column hAlign="Center">
+                                <Text text="Action"/>
+                            </Column>
                         </columns>
 
                         <items>
-
                             <ColumnListItem>
-
                                 <cells>
 
                                     <ObjectIdentifier
-                                        title="{recentIssues>partNumber}"/>
+                                        title="{serviceIssues>serviceCenter}"
+                                        text="{serviceIssues>serviceCenterCode}"/>
+
+                                    <ObjectIdentifier
+                                        title="{serviceIssues>partNumber}"
+                                        text="{serviceIssues>description}"/>
 
                                     <Text
-                                        text="{recentIssues>description}"/>
+                                        text="{serviceIssues>warehouse}"/>
 
                                     <Text
-                                        text="{recentIssues>location}"/>
-
-                                    <ObjectNumber
-                                        number="{recentIssues>quantity}"
-                                        unit="units"
-                                        emphasized="true"
-                                        state="Information"/>
+                                        text="{serviceIssues>issuedQuantity}"/>
 
                                     <Text
-                                        text="{recentIssues>reference}"/>
+                                        text="{serviceIssues>consumedQuantity}"/>
 
                                     <Text
-                                        text="{recentIssues>dateTime}"/>
+                                        text="{serviceIssues>unusedReturnedQuantity}"/>
+
+                                    <Text
+                                        text="{serviceIssues>defectiveReturnedQuantity}"/>
+
+                                    <ObjectStatus
+                                        text="{serviceIssues>status}"
+                                        state="{= ${serviceIssues>status} === 'RECONCILED' ? 'Success' : 'Warning'}"/>
+
+                                    <Text
+                                        text="{serviceIssues>dateTime}"/>
+
+                                    <Button
+                                        text="Reconcile"
+                                        icon="sap-icon://accept"
+                                        type="Emphasized"
+                                        visible="{= ${serviceIssues>status} === 'ISSUED'}"
+                                        press="onReconcilePress"/>
 
                                 </cells>
-
                             </ColumnListItem>
-
                         </items>
 
                     </Table>
@@ -295,9 +275,6 @@
                 </VBox>
 
             </VBox>
-
         </content>
-
     </Page>
-
 </mvc:View>

@@ -1,7 +1,15 @@
 sap.ui.define([
     "sap/ui/core/mvc/Controller",
-    "sap/ui/model/json/JSONModel"
-], function (Controller, JSONModel) {
+    "sap/ui/model/json/JSONModel",
+    "sap/m/Dialog",
+    "sap/m/Button",
+    "sap/m/Input",
+    "sap/m/Label",
+    "sap/m/Text",
+    "sap/m/VBox",
+    "sap/m/MessageBox",
+      "sap/ui/layout/form/SimpleForm"
+], function (Controller, JSONModel, Dialog, Button, Input, Label, Text, VBox, MessageBox,SimpleForm) {
     "use strict";
 
     return Controller.extend("inventorytest.controller.InventoryList", {
@@ -17,7 +25,8 @@ sap.ui.define([
                     allItems: [],
                     items: [],
                     locations: [],
-                    filterParts: []
+                    filterParts: [],
+                    showRaisePR: false
                 }),
                 "inventoryList"
             );
@@ -687,6 +696,13 @@ sap.ui.define([
                 this._sCurrentFilter || "all";
 
 
+            // The Raise PR column is only shown on the Low Stock list.
+            oModel.setProperty(
+                "/showRaisePR",
+                sFilter === "lowStock"
+            );
+
+
             const sLocation =
                 String(
                     this._sLocationFilter || ""
@@ -825,6 +841,167 @@ sap.ui.define([
                     );
 
                     break;
+            }
+        },
+
+
+        /* ============================================================
+         * RAISE PURCHASE REQUISITION (Low Stock list only)
+         * ============================================================ */
+
+        onRaisePRPress: function (oEvent) {
+
+            const oRow =
+                oEvent.getSource()
+                    .getBindingContext("inventoryList")
+                    .getObject();
+
+            this._openRaisePRDialog(oRow);
+        },
+
+
+      _openRaisePRDialog: function (oRow) {
+
+    const iSuggested = Math.max(
+        (oRow.reorderLevel || 0) - (oRow.quantityOnHand || 0),
+        1
+    );
+
+    const oQtyInput = new Input({
+        type: "Number",
+        width: "100%",
+        value: String(iSuggested),
+        valueStateText: "Enter a whole number greater than 0.",
+        liveChange: function (oEvt) {
+            oEvt.getSource().setValueState("None");
+        }
+    });
+
+    const oForm = new SimpleForm({
+        editable: true,
+        layout: "ResponsiveGridLayout",
+        adjustLabelSpan: false,
+        singleContainerFullSize: false,
+        labelSpanXL: 4,
+        labelSpanL: 4,
+        labelSpanM: 4,
+        labelSpanS: 12,
+        emptySpanXL: 0,
+        emptySpanL: 0,
+        emptySpanM: 0,
+        emptySpanS: 0,
+        columnsXL: 1,
+        columnsL: 1,
+        columnsM: 1,
+        content: [
+            new Label({ text: "Part Number" }),
+            new Text({ text: oRow.partNumber }),
+
+            new Label({ text: "Description" }),
+            new Text({ text: oRow.description || "-" }),
+
+            new Label({ text: "Location" }),
+            new Text({ text: oRow.locationName }),
+
+            new Label({ text: "On Hand" }),
+            new Text({ text: String(oRow.quantityOnHand) }),
+
+            new Label({ text: "Reorder Level" }),
+            new Text({ text: String(oRow.reorderLevel) }),
+
+            new Label({
+                text: "Quantity to Order",
+                labelFor: oQtyInput,
+                required: true
+            }),
+            oQtyInput
+        ]
+    });
+
+    const oDialog = new Dialog({
+        title: "Raise Purchase Requisition",
+        contentWidth: "30rem",
+        initialFocus: oQtyInput,
+        content: [oForm],
+        beginButton: new Button({
+            text: "Raise PR",
+            type: "Emphasized",
+            press: function () {
+                this._submitRaisePR(oDialog, oQtyInput, oRow);
+            }.bind(this)
+        }),
+        endButton: new Button({
+            text: "Cancel",
+            press: function () {
+                oDialog.close();
+            }
+        }),
+        afterClose: function () {
+            oDialog.destroy();
+        }
+    });
+
+    this.getView().addDependent(oDialog);
+    oDialog.open();
+},
+
+
+        _submitRaisePR: async function (oDialog, oQtyInput, oRow) {
+
+            const iQuantity = parseInt(oQtyInput.getValue(), 10);
+
+            if (!(iQuantity > 0)) {
+                oQtyInput.setValueState("Error");
+                return;
+            }
+
+            const oModel = this.getOwnerComponent().getModel();
+
+            oDialog.setBusy(true);
+
+            try {
+
+                // raisePurchaseRequisition is bound to Inventory, so the
+                // call goes through the Inventory key path.
+                const oAction = oModel.bindContext(
+                    "/Inventory(part_ID=" + oRow.partID +
+                    ",location_ID=" + oRow.locationID +
+                    ")/InventoryService.raisePurchaseRequisition(...)"
+                );
+
+                oAction.setParameter("quantity", iQuantity);
+
+                await oAction.execute();
+
+                const oResult = oAction.getBoundContext().getObject();
+                const sMessage =
+                    (oResult && oResult.value) ||
+                    "Purchase requisition created.";
+
+                oDialog.close();
+
+                MessageBox.success(sMessage, {
+                    actions: ["View requisitions", MessageBox.Action.CLOSE],
+                    emphasizedAction: "View requisitions",
+                    onClose: function (sAction) {
+                        if (sAction === "View requisitions") {
+                            this.getOwnerComponent()
+                                .getRouter()
+                                .navTo("purchaseRequisitions");
+                        }
+                    }.bind(this)
+                });
+
+            } catch (oError) {
+
+                console.error("Raise PR error:", oError);
+
+                oDialog.setBusy(false);
+
+                MessageBox.error(
+                    (oError && oError.message) ||
+                    "Failed to raise purchase requisition."
+                );
             }
         },
 
