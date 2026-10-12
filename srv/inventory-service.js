@@ -5,22 +5,16 @@ module.exports = cds.service.impl(async function () {
   const WORKFLOW_DEFINITION_ID='us10.3c318b49trial.mobisinventory3.managerApproval';
   const { SpareParts, Locations, Inventory, StockMovements, AlertNotifications,StockTransferRequests } =
     this.entities;
-  // ApplicationLogs lives in the db namespace, not exposed via this service's
-  // API, so we reach it through the CDS reflection model rather than
-  // this.entities (which only lists entities this service projects).
-  const { ApplicationLogs } = cds.entities('mobis.db');
+  
+  const { ApplicationLogs,PurchaseRequisitions } = cds.entities('mobis.db');
 
-  // Shared helper: fetch (or lazily create) the Inventory row for a
-  // part/location pair. In enterprise MM terms this is the equivalent of
-  // reading MARD (storage-location stock) before posting a material doc.
+  
   async function getInventoryRow(tx, partID, locationID) {
     let row = await tx.run(
       SELECT.one.from(Inventory).where({ part_ID: partID, location_ID: locationID })
     );
     if (!row) {
-      // First movement ever for this part at this location — initialize at 0
-      // rather than erroring, since "no row yet" and "zero stock" are the
-      // same business fact.
+     
       await tx.run(
         INSERT.into(Inventory).entries({ part_ID: partID, location_ID: locationID, quantityOnHand: 0 })
       );
@@ -29,6 +23,7 @@ module.exports = cds.service.impl(async function () {
     return row;
   }
 
+  //alert notification entity if service impl
   async function raiseLowStockAlertIfNeeded(tx, part, locationID, newQty) {
     const effectiveReorderLevel =
       (await tx.run(SELECT.one.from(Inventory).where({ part_ID: part.ID, location_ID: locationID })))
@@ -47,15 +42,18 @@ module.exports = cds.service.impl(async function () {
     }
   }
 
-  // issueStock — validations mirror your spec exactly:
-  //   1. part exists   2. location exists   3. qty > 0
-  //   4. sufficient available stock (never allow negative inventory)
-  this.on('issueStock', async (req) => {
-    const { partID, locationID, quantity, reference } = req.data;
+ 
+    this.on('issueStock', async (req) => {
+    const { partID, locationID, quantity, reference, serviceCenterID } = req.data;
     const tx = cds.transaction(req);
 
     if (!(quantity > 0)) {
       return req.error(400, 'Quantity must be a positive number.');
+    }
+
+    // Service center is required for every issue
+    if (!serviceCenterID) {
+      return req.error(400, 'Service center is required.');
     }
 
     const part = await tx.run(SELECT.one.from(SpareParts).where({ ID: partID }));
@@ -64,9 +62,15 @@ module.exports = cds.service.impl(async function () {
     const location = await tx.run(SELECT.one.from(Locations).where({ ID: locationID }));
     if (!location) return req.error(404, `Location ${locationID} does not exist.`);
 
+    const center = await tx.run(
+      SELECT.one.from('mobis.db.ServiceCenters').where({ ID: serviceCenterID })
+    );
+    if (!center) return req.error(404, 'Service center does not exist.');
+    if (!center.isActive) return req.error(400, 'Service center is inactive.');
+
     const invRow = await getInventoryRow(tx, partID, locationID);
     if (invRow.quantityOnHand < quantity) {
-      // Log the failed attempt — this is what your spec calls "application logging"
+
       await tx.run(
         INSERT.into(ApplicationLogs).entries({
           layer: 'InventoryService',
@@ -100,16 +104,28 @@ module.exports = cds.service.impl(async function () {
       })
     );
 
+    // Track what happens to the parts after they reach the service center
+    await tx.run(
+      INSERT.into('mobis.db.ServicePartIssues').entries({
+        ID: cds.utils.uuid(),
+        serviceCenter_ID: serviceCenterID,
+        warehouse_ID: locationID,
+        part_ID: partID,
+        issuedQuantity: quantity,
+        consumedQuantity: 0,
+        unusedReturnedQuantity: 0,
+        defectiveReturnedQuantity: 0,
+        status: 'ISSUED',
+        issueDate: new Date().toISOString(),
+        remarks: reference
+      })
+    );
+
     await raiseLowStockAlertIfNeeded(tx, part, locationID, newQty);
 
     return SELECT.one.from(StockMovements).where({ part_ID: partID, reference });
   });
-
-  // transferStock — same guard rails as issue, applied to the SOURCE
-  // location, plus a mandatory increment on the TARGET location.
-  // Modeled as ONE ledger row with both fromLocation and toLocation set,
-  // not two rows — this preserves the semantic "this was one transfer",
-  // which matters when you reconcile movements later.
+  
   this.on('transferStock', async (req) => {
     const { partID, fromLocationID, toLocationID, quantity, reference } = req.data;
     const tx = cds.transaction(req);
@@ -273,7 +289,7 @@ this.on('approveStockTransferRequest', async (req) => {
 
     const tx = cds.transaction(req);
 
-    // Get the transfer request
+   
     const transferRequest = await tx.run(
         SELECT.one
             .from('mobis.db.StockTransferRequests')
@@ -284,7 +300,7 @@ this.on('approveStockTransferRequest', async (req) => {
         return req.error(404, 'Stock transfer request not found.');
     }
 
-    // Request must be pending
+  
     if (transferRequest.status !== 'PENDING') {
         return req.error(400, 'Only pending requests can be approved.');
     }
@@ -296,7 +312,7 @@ this.on('approveStockTransferRequest', async (req) => {
         quantity
     } = transferRequest;
 
-    // Check source inventory
+    
     const sourceInventory = await tx.run(
         SELECT.one
             .from('mobis.db.Inventory')
@@ -310,7 +326,7 @@ this.on('approveStockTransferRequest', async (req) => {
         return req.error(400, 'Insufficient stock at source location.');
     }
 
-    // Reduce source stock
+   
     await tx.run(
         UPDATE('mobis.db.Inventory')
             .set({
@@ -322,7 +338,7 @@ this.on('approveStockTransferRequest', async (req) => {
             })
     );
 
-    // Check destination inventory
+  
     const destinationInventory = await tx.run(
         SELECT.one
             .from('mobis.db.Inventory')
@@ -420,7 +436,7 @@ this.on('generateDailyInventorySummary', async (req) => {
 
   const now = new Date();
 
-  // Current calendar day
+ 
   const startOfDay = new Date(
     Date.UTC(
       now.getUTCFullYear(),
@@ -432,13 +448,13 @@ this.on('generateDailyInventorySummary', async (req) => {
   const endOfDay = new Date(startOfDay);
   endOfDay.setUTCDate(endOfDay.getUTCDate() + 1);
 
-  // Get POSTED movements
+  
   const movements = await tx.run(
     SELECT.from('mobis.db.StockMovements')
       .where({ status: 'POSTED' })
   );
 
-  // Keep only today's ISSUE and TRANSFER movements
+ 
   const dailyMovements = movements.filter(m => {
 
     const movementDate = new Date(m.createdAt);
@@ -480,6 +496,131 @@ this.on('generateDailyInventorySummary', async (req) => {
   return JSON.stringify(summary);
 });
 
+this.on('raisePurchaseRequisition', async (req) => {
 
+    const { part_ID, location_ID } = req.params[0];
+
+    const inventory = await SELECT.one
+        .from(Inventory)
+        .where({ part_ID, location_ID });
+
+    if (!inventory) {
+        return req.error(404, 'Inventory record not found');
+    }
+
+    // Determine reorder level
+    let reorderLevel = inventory.reorderLevel;
+
+    if (reorderLevel === null || reorderLevel === undefined) {
+
+        const sparePart = await SELECT.one
+            .from(SpareParts)
+            .where({ ID: part_ID });
+
+        if (!sparePart) {
+            return req.error(404, 'Spare part not found');
+        }
+
+        reorderLevel = sparePart.reorderLevel ?? 0;
+    }
+
+    // Use the quantity entered by the user.
+    // Fall back to the shortfall only if none was sent.
+    const suggestedQty = reorderLevel - inventory.quantityOnHand;
+    const requiredQty = req.data.quantity ?? suggestedQty;
+
+    if (!Number.isInteger(requiredQty) || requiredQty <= 0) {
+        return req.error(400, 'Quantity must be a whole number greater than zero.');
+    }
+
+    // Generate PR number
+    const prNumber = 'PR-' + Date.now();
+
+    // Create PR
+    await INSERT.into(PurchaseRequisitions).entries({
+        prNumber: prNumber,
+        location_ID: location_ID,
+        status: 'PENDING',
+        requestedBy: req.user.id,
+        items: [
+            {
+                part_ID: part_ID,
+                requiredQty: requiredQty
+            }
+        ]
+    });
+
+    return `Purchase Requisition ${prNumber} created successfully`;
+});
+
+
+  // ---------- RECONCILE AFTER REPAIR ----------
+  this.on('reconcileServiceIssue', async (req) => {
+    const { issueID, consumedQuantity, unusedReturnedQuantity, defectiveReturnedQuantity } = req.data;
+    const tx = cds.transaction(req);
+
+    for (const n of [consumedQuantity, unusedReturnedQuantity, defectiveReturnedQuantity]) {
+      if (!Number.isInteger(n) || n < 0)
+        return req.error(400, 'Quantities must be whole numbers, zero or more.');
+    }
+
+    const issue = await tx.run(
+      SELECT.one.from('mobis.db.ServicePartIssues').where({ ID: issueID })
+    );
+    if (!issue) return req.error(404, 'Service issue not found.');
+    if (issue.status !== 'ISSUED')
+      return req.error(409, 'This issue is already reconciled.');
+
+    const total = consumedQuantity + unusedReturnedQuantity + defectiveReturnedQuantity;
+    if (total !== issue.issuedQuantity)
+      return req.error(
+        400,
+        `Quantities must add up to the issued quantity. Issued: ${issue.issuedQuantity}, entered: ${total}.`
+      );
+
+    // Close the issue; the status guard makes sure it can only be reconciled once
+    const closed = await tx.run(
+      UPDATE('mobis.db.ServicePartIssues')
+        .set({
+          consumedQuantity,
+          unusedReturnedQuantity,
+          defectiveReturnedQuantity,
+          status: 'RECONCILED',
+          reconciledDate: new Date().toISOString()
+        })
+        .where({ ID: issueID, status: 'ISSUED' })
+    );
+    if (!closed) return req.error(409, 'This issue is already reconciled.');
+
+    // Only unused parts go back into usable stock. Defective parts stay on the record only.
+    if (unusedReturnedQuantity > 0) {
+      const back = await tx.run(
+        UPDATE('mobis.db.Inventory')
+          .set({ quantityOnHand: { '+=': unusedReturnedQuantity }, lastMovementAt: new Date().toISOString() })
+          .where({ part_ID: issue.part_ID, location_ID: issue.warehouse_ID })
+      );
+      if (!back) {
+        await tx.run(
+          INSERT.into('mobis.db.Inventory').entries({
+            part_ID: issue.part_ID,
+            location_ID: issue.warehouse_ID,
+            quantityOnHand: unusedReturnedQuantity,
+            lastMovementAt: new Date().toISOString()
+          })
+        );
+      }
+    }
+
+    await tx.run(
+      INSERT.into(ApplicationLogs).entries({
+        layer: 'InventoryService',
+        operation: 'reconcileServiceIssue',
+        message: `Issue ${issueID}: consumed ${consumedQuantity}, returned ${unusedReturnedQuantity}, defective ${defectiveReturnedQuantity}.`,
+        severity: 'INFO'
+      })
+    );
+
+    return SELECT.one.from('mobis.db.ServicePartIssues').where({ ID: issueID });
+  });
 
 });

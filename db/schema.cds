@@ -154,3 +154,30 @@ entity StockTransferRequests:cuid,managed{
   rejectionReason:String(500);
   completedAt:Timestamp;
 }
+
+
+
+entity ServicePartIssues : cuid, managed {
+  serviceCenter             : Association to ServiceCenters   @mandatory;  // must be type SERVICE_CENTER
+  warehouse                 : Association to Locations  @mandatory;  // must be type WAREHOUSE
+  part                      : Association to SpareParts @mandatory;
+  issuedQuantity            : Integer @mandatory;
+  consumedQuantity          : Integer default 0;
+  unusedReturnedQuantity    : Integer default 0;
+  defectiveReturnedQuantity : Integer default 0;
+  status                    : String(20) enum { ISSUED; RECONCILED } default 'ISSUED';
+  issueDate                 : Timestamp;
+  reconciledDate            : Timestamp;
+  remarks                   : String(200);
+}
+
+entity ServiceCenters : cuid, managed {
+  serviceCenterCode : String(20) @mandatory @assert.unique;
+  name              : String(100) @mandatory;
+  city              : String(50);
+  region            : String(50);
+  contactPerson     : String(100);
+  phone             : String(20);
+  email             : String(100);
+  isActive          : Boolean default true;
+}
