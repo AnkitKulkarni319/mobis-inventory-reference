@@ -1,4 +1,3 @@
-
 <mvc:View xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:fb="sap.ui.comp.filterbar" xmlns:core="sap.ui.core" controllerName="inventorytest.controller.InventoryList">
 <Page id="inventoryListPage" class="pgPage" title="Inventory List" showNavButton="true" navButtonPress="onNavBack">
 <content>
@@ -40,6 +39,8 @@
 <Title text="Inventory Records" level="H3" class="sapUiTinyMarginBegin"/>
 <ToolbarSpacer/>
 <Text text="{= ${inventoryList>/items}.length} records" class="pgMuted"/>
+<Text text="Updated {inventoryList>/lastUpdated}" class="pgMuted sapUiTinyMarginBegin"/>
+<Button icon="sap-icon://refresh" type="Transparent" tooltip="Refresh now" press="onRefreshInventory"/>
 </Toolbar>
 <Table id="invTable" class="recentTable" growing="true" growingThreshold="20" noDataText="No inventory records found" items="{inventoryList>/items}">
 <columns>
@@ -80,7 +81,7 @@
 </HBox>
 <Text text="{inventoryList>reorderLevel}"/>
 <ObjectStatus text="{inventoryList>status}" inverted="true" state="{inventoryList>statusState}"/>
-<Button text="Raise PR" icon="sap-icon://add-document" type="Emphasized" press=".onRaisePRPress"/>
+<Button text="Raise PR" icon="sap-icon://add-document" type="Emphasized" press=".onRaisePRPress" visible="{inventoryList>/showRaisePR}"/>
 </cells>
 </ColumnListItem>
 </items>

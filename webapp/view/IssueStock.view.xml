@@ -1,4 +1,3 @@
-
 <mvc:View
     xmlns:mvc="sap.ui.core.mvc"
     xmlns:f="sap.ui.layout.form"
@@ -124,6 +123,12 @@
                         class="pgActions">
 
                         <Button
+                            text="Service Center Issues"
+                            icon="sap-icon://action-settings"
+                            type="Transparent"
+                            press="onGoToServiceCenter"/>
+
+                        <Button
                             text="Cancel"
                             press="onNavBack"/>
 
@@ -137,17 +142,17 @@
 
                 </VBox>
 
-                <!-- SERVICE CENTER ISSUES & RECONCILIATION -->
+                <!-- LATEST STOCK ISSUES -->
                 <VBox class="pgCard">
 
                     <Toolbar class="dashPanelToolbar">
 
                         <core:Icon
-                            src="sap-icon://action-settings"
+                            src="sap-icon://history"
                             class="panelHeaderIcon"/>
 
                         <Title
-                            text="Service Center Issues &amp; Reconciliation"
+                            text="Latest Stock Issues"
                             level="H3"
                             class="sapUiTinyMarginBegin"/>
 
@@ -156,58 +161,39 @@
                         <Button
                             icon="sap-icon://refresh"
                             type="Transparent"
-                            tooltip="Refresh service center issues"
-                            press="onRefreshServiceIssues"/>
+                            tooltip="Refresh latest stock issues"
+                            press="onRefreshLatestIssues"/>
                     </Toolbar>
 
                     <Table
-                        id="serviceIssuesTable"
+                        id="latestIssuesTable"
                         class="recentTable"
-                        growing="true"
-                        growingThreshold="10"
-                        noDataText="No service center issues found"
-                        items="{serviceIssues>/items}">
+                        noDataText="No stock issues found"
+                        items="{latestIssues>/items}">
 
                         <columns>
                             <Column>
                                 <Text text="Service Center"/>
                             </Column>
 
-                            <Column
-                                minScreenWidth="Tablet"
-                                demandPopin="true">
-                                <Text text="Part"/>
+                            <Column>
+                                <Text text="Part Number"/>
                             </Column>
 
                             <Column
-                                minScreenWidth="Desktop"
+                                minScreenWidth="Tablet"
                                 demandPopin="true">
                                 <Text text="Warehouse"/>
                             </Column>
 
                             <Column hAlign="End">
-                                <Text text="Issued"/>
+                                <Text text="Quantity"/>
                             </Column>
 
                             <Column
-                                hAlign="End"
-                                minScreenWidth="Tablet"
+                                minScreenWidth="Desktop"
                                 demandPopin="true">
-                                <Text text="Consumed"/>
-                            </Column>
-
-                            <Column
-                                hAlign="End"
-                                minScreenWidth="Tablet"
-                                demandPopin="true">
-                                <Text text="Returned"/>
-                            </Column>
-
-                            <Column
-                                hAlign="End"
-                                minScreenWidth="Tablet"
-                                demandPopin="true">
-                                <Text text="Defective"/>
+                                <Text text="Reference"/>
                             </Column>
 
                             <Column>
@@ -215,13 +201,9 @@
                             </Column>
 
                             <Column
-                                minScreenWidth="Desktop"
+                                minScreenWidth="Tablet"
                                 demandPopin="true">
-                                <Text text="Issued On"/>
-                            </Column>
-
-                            <Column hAlign="Center">
-                                <Text text="Action"/>
+                                <Text text="Date / Time"/>
                             </Column>
                         </columns>
 
@@ -230,41 +212,29 @@
                                 <cells>
 
                                     <ObjectIdentifier
-                                        title="{serviceIssues>serviceCenter}"
-                                        text="{serviceIssues>serviceCenterCode}"/>
+                                        title="{latestIssues>serviceCenter}"
+                                        text="{latestIssues>serviceCenterCode}"/>
 
                                     <ObjectIdentifier
-                                        title="{serviceIssues>partNumber}"
-                                        text="{serviceIssues>description}"/>
+                                        title="{latestIssues>partNumber}"
+                                        text="{latestIssues>description}"/>
 
-                                    <Text
-                                        text="{serviceIssues>warehouse}"/>
+                                    <Text text="{latestIssues>warehouse}"/>
 
-                                    <Text
-                                        text="{serviceIssues>issuedQuantity}"/>
+                                    <ObjectNumber
+                                        number="{latestIssues>quantity}"
+                                        unit="units"
+                                        emphasized="true"
+                                        state="Information"/>
 
-                                    <Text
-                                        text="{serviceIssues>consumedQuantity}"/>
-
-                                    <Text
-                                        text="{serviceIssues>unusedReturnedQuantity}"/>
-
-                                    <Text
-                                        text="{serviceIssues>defectiveReturnedQuantity}"/>
+                                    <Text text="{latestIssues>reference}"/>
 
                                     <ObjectStatus
-                                        text="{serviceIssues>status}"
-                                        state="{= ${serviceIssues>status} === 'RECONCILED' ? 'Success' : 'Warning'}"/>
+                                        text="{latestIssues>status}"
+                                        inverted="true"
+                                        state="{= ${latestIssues>status} === 'RECONCILED' ? 'Success' : 'Warning'}"/>
 
-                                    <Text
-                                        text="{serviceIssues>dateTime}"/>
-
-                                    <Button
-                                        text="Reconcile"
-                                        icon="sap-icon://accept"
-                                        type="Emphasized"
-                                        visible="{= ${serviceIssues>status} === 'ISSUED'}"
-                                        press="onReconcilePress"/>
+                                    <Text text="{latestIssues>dateTime}"/>
 
                                 </cells>
                             </ColumnListItem>

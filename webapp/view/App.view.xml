@@ -26,6 +26,8 @@
 <tnt:NavigationListItem key="dashboard" text="Dashboard" icon="sap-icon://home"/>
 <tnt:NavigationListItem key="all" text="Inventory List" icon="sap-icon://list"/>
 <tnt:NavigationListItem key="issue" text="Issue Stock" icon="sap-icon://outbox"/>
+<tnt:NavigationListItem key="serviceCenter" text="Service Center" icon="sap-icon://action-settings"/>
+<tnt:NavigationListItem key="inspection" text="Kept for Inspection" icon="sap-icon://inspection"/>
 <tnt:NavigationListItem key="healthy" text="Healthy Stock" icon="sap-icon://accept"/>
 </tnt:NavigationList>
 </tnt:item>

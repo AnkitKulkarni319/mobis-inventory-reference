@@ -20,13 +20,20 @@ sap.ui.define([
             this._sLocationFilter = "";
             this._sPartNumberFilter = "";
 
+            // Auto refresh state
+            this._iRefreshTimer = null;
+            this._bLoading = false;
+            this._sSnapshot = "";
+            this._iRefreshSeconds = 30;
+
             this.getView().setModel(
                 new JSONModel({
                     allItems: [],
                     items: [],
                     locations: [],
                     filterParts: [],
-                    showRaisePR: false
+                    showRaisePR: false,
+                    lastUpdated: ""
                 }),
                 "inventoryList"
             );
@@ -39,18 +46,35 @@ sap.ui.define([
                     this
                 );
 
+            // Stop the timer as soon as another page is opened.
+            this.getOwnerComponent()
+                .getRouter()
+                .attachRouteMatched(
+                    this._onAnyRouteMatched,
+                    this
+                );
+
             this._loadInventory();
         },
 
 
-        _loadInventory: async function () {
+        _loadInventory: async function (bSilent) {
+
+            // Never run two loads at the same time.
+            if (this._bLoading) {
+                return;
+            }
+
+            this._bLoading = true;
+
+            let oInvBinding;
 
             try {
 
                 const oModel =
                     this.getOwnerComponent().getModel();
 
-                const oInvBinding = oModel.bindList(
+                oInvBinding = oModel.bindList(
                     "/Inventory",
                     null,
                     [],
@@ -146,6 +170,23 @@ sap.ui.define([
                     });
 
 
+                // On a silent (automatic) refresh, do nothing if the
+                // data has not changed. This keeps the table, scroll
+                // position and "show more" state exactly as they are.
+                const sSnapshot =
+                    JSON.stringify(aInventory);
+
+                if (
+                    bSilent === true &&
+                    sSnapshot === this._sSnapshot
+                ) {
+                    this._setLastUpdated();
+                    return;
+                }
+
+                this._sSnapshot = sSnapshot;
+
+
                 const oInventoryListModel =
                     this.getView()
                         .getModel("inventoryList");
@@ -168,12 +209,22 @@ sap.ui.define([
 
                 this._applyRouteFilter();
 
+                this._setLastUpdated();
+
             } catch (oError) {
 
                 console.error(
                     "Failed to load inventory:",
                     oError
                 );
+
+            } finally {
+
+                this._bLoading = false;
+
+                if (oInvBinding) {
+                    oInvBinding.destroy();
+                }
             }
         },
 
@@ -572,6 +623,10 @@ sap.ui.define([
 
 
             this._applyRouteFilter();
+
+            // Show the latest data and start the automatic refresh.
+            this._loadInventory(true);
+            this._startAutoRefresh();
         },
 
 
@@ -699,7 +754,7 @@ sap.ui.define([
             // The Raise PR column is only shown on the Low Stock list.
             oModel.setProperty(
                 "/showRaisePR",
-                sFilter === "lowStock"
+                sFilter === "lowStock"  || sFilter === "outOfStock"
             );
 
 
@@ -1003,6 +1058,89 @@ sap.ui.define([
                     "Failed to raise purchase requisition."
                 );
             }
+        },
+
+
+        /* ============================================================
+         * NAVIGATION BACK
+         * ============================================================ */
+
+        /* ============================================================
+         * AUTO REFRESH
+         * ============================================================ */
+
+        _setLastUpdated: function () {
+
+            const oModel =
+                this.getView()
+                    .getModel("inventoryList");
+
+            if (oModel) {
+
+                oModel.setProperty(
+                    "/lastUpdated",
+                    new Date().toLocaleTimeString()
+                );
+            }
+        },
+
+
+        _startAutoRefresh: function () {
+
+            this._stopAutoRefresh();
+
+            this._iRefreshTimer = setInterval(
+                function () {
+
+                    // Do not load data while the browser tab is hidden.
+                    if (document.hidden) {
+                        return;
+                    }
+
+                    this._loadInventory(true);
+
+                }.bind(this),
+                this._iRefreshSeconds * 1000
+            );
+        },
+
+
+        _stopAutoRefresh: function () {
+
+            if (this._iRefreshTimer) {
+
+                clearInterval(this._iRefreshTimer);
+
+                this._iRefreshTimer = null;
+            }
+        },
+
+
+        _onAnyRouteMatched: function (oEvent) {
+
+            if (oEvent.getParameter("name") !== "inventory") {
+
+                this._stopAutoRefresh();
+            }
+        },
+
+
+        onRefreshInventory: function () {
+
+            this._loadInventory(false);
+        },
+
+
+        onExit: function () {
+
+            this._stopAutoRefresh();
+
+            this.getOwnerComponent()
+                .getRouter()
+                .detachRouteMatched(
+                    this._onAnyRouteMatched,
+                    this
+                );
         },
 
 

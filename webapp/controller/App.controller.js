@@ -40,6 +40,12 @@ sap.ui.define([
             route: "issue"
         },
 
+        serviceCenter: {
+            route: "serviceCenter"
+        },
+        inspection: {
+            route: "inspection"
+        },
         transfer: {
             route: "transfer"
         },
