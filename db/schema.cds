@@ -73,7 +73,7 @@ entity StockMovements : cuid, managed {
 }
 
 entity PurchaseRequisitions : cuid, managed {
-  prNumber    : String(20);
+  prNumber  : String(20) @assert.unique;
   location    : Association to Locations @mandatory;
   status      : String(20) enum { DRAFT; SUBMITTED; APPROVED; REJECTED; CONVERTED } default 'DRAFT';
   requestedBy : String(100);

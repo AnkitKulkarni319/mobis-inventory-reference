@@ -497,60 +497,61 @@ this.on('generateDailyInventorySummary', async (req) => {
 });
 
 this.on('raisePurchaseRequisition', async (req) => {
-
-    const { part_ID, location_ID } = req.params[0];
-
-    const inventory = await SELECT.one
-        .from(Inventory)
-        .where({ part_ID, location_ID });
-
-    if (!inventory) {
-        return req.error(404, 'Inventory record not found');
+  const { part_ID, location_ID } = req.params[0];
+ 
+  const inventory = await SELECT.one
+    .from(Inventory)
+    .where({ part_ID, location_ID });
+ 
+  if (!inventory) {
+    return req.error(404, 'Inventory record not found');
+  }
+ 
+  let reorderLevel = inventory.reorderLevel;
+ 
+  if (reorderLevel === null || reorderLevel === undefined) {
+    const sparePart = await SELECT.one
+      .from(SpareParts)
+      .where({ ID: part_ID });
+ 
+    if (!sparePart) {
+      return req.error(404, 'Spare part not found');
     }
-
-    // Determine reorder level
-    let reorderLevel = inventory.reorderLevel;
-
-    if (reorderLevel === null || reorderLevel === undefined) {
-
-        const sparePart = await SELECT.one
-            .from(SpareParts)
-            .where({ ID: part_ID });
-
-        if (!sparePart) {
-            return req.error(404, 'Spare part not found');
-        }
-
-        reorderLevel = sparePart.reorderLevel ?? 0;
-    }
-
-    // Use the quantity entered by the user.
-    // Fall back to the shortfall only if none was sent.
-    const suggestedQty = reorderLevel - inventory.quantityOnHand;
-    const requiredQty = req.data.quantity ?? suggestedQty;
-
-    if (!Number.isInteger(requiredQty) || requiredQty <= 0) {
-        return req.error(400, 'Quantity must be a whole number greater than zero.');
-    }
-
-    // Generate PR number
-    const prNumber = 'PR-' + Date.now();
-
-    // Create PR
-    await INSERT.into(PurchaseRequisitions).entries({
-        prNumber: prNumber,
-        location_ID: location_ID,
-        status: 'PENDING',
-        requestedBy: req.user.id,
-        items: [
-            {
-                part_ID: part_ID,
-                requiredQty: requiredQty
-            }
-        ]
-    });
-
-    return `Purchase Requisition ${prNumber} created successfully`;
+ 
+    reorderLevel = sparePart.reorderLevel ?? 0;
+  }
+ 
+  const suggestedQty = reorderLevel - inventory.quantityOnHand;
+  const requiredQty = req.data.quantity ?? suggestedQty;
+ 
+  if (!Number.isInteger(requiredQty) || requiredQty <= 0) {
+    return req.error(400, 'Quantity must be a whole number greater than zero.');
+  }
+ 
+  // Auto-generate next PR number: find highest existing PR-xxxx and add 1
+  const existing = await SELECT.from(PurchaseRequisitions).columns('prNumber');
+ 
+  let max = 2999; // if the table is empty, the first PR will be PR-3000
+  for (const row of existing) {
+    const n = parseInt(String(row.prNumber).replace('PR-', ''), 10);
+    if (!Number.isNaN(n) && n > max) max = n;
+  }
+  const prNumber = 'PR-' + (max + 1);
+ 
+  await INSERT.into(PurchaseRequisitions).entries({
+    prNumber: prNumber,
+    location_ID: location_ID,
+    status: 'DRAFT',
+    requestedBy: req.user.id,
+    items: [
+      {
+        part_ID: part_ID,
+        requiredQty: requiredQty
+      }
+    ]
+  });
+ 
+  return `Purchase Requisition ${prNumber} created successfully`;
 });
 
 
@@ -616,6 +617,72 @@ this.on('raisePurchaseRequisition', async (req) => {
         layer: 'InventoryService',
         operation: 'reconcileServiceIssue',
         message: `Issue ${issueID}: consumed ${consumedQuantity}, returned ${unusedReturnedQuantity}, defective ${defectiveReturnedQuantity}.`,
+        severity: 'INFO'
+      })
+    );
+
+    return SELECT.one.from('mobis.db.ServicePartIssues').where({ ID: issueID });
+  });
+
+
+
+    // ---------- RETURN KEPT-FOR-INSPECTION PARTS TO WAREHOUSE ----------
+  this.on('returnFromInspection', async (req) => {
+    const { issueID, quantity } = req.data;
+    const tx = cds.transaction(req);
+
+    if (!Number.isInteger(quantity) || quantity <= 0)
+      return req.error(400, 'Quantity must be a whole number greater than zero.');
+
+    const issue = await tx.run(
+      SELECT.one.from('mobis.db.ServicePartIssues').where({ ID: issueID })
+    );
+    if (!issue) return req.error(404, 'Service issue not found.');
+
+    const defective = issue.defectiveReturnedQuantity || 0;
+    if (quantity > defective)
+      return req.error(
+        409,
+        `Only ${defective} unit(s) are kept for inspection. Requested: ${quantity}.`
+      );
+
+    // Move the units out of "defective" first. The where-guard stops two
+    // parallel requests from returning the same units twice.
+    const moved = await tx.run(
+      UPDATE('mobis.db.ServicePartIssues')
+        .set({
+          defectiveReturnedQuantity: { '-=': quantity },
+          unusedReturnedQuantity: { '+=': quantity }
+        })
+        .where({ ID: issueID, defectiveReturnedQuantity: { '>=': quantity } })
+    );
+    if (!moved)
+      return req.error(409, 'These units were already returned. Please refresh.');
+
+    // Put the units back into usable stock at the warehouse they were issued from
+    const now = new Date().toISOString();
+
+    const back = await tx.run(
+      UPDATE('mobis.db.Inventory')
+        .set({ quantityOnHand: { '+=': quantity }, lastMovementAt: now })
+        .where({ part_ID: issue.part_ID, location_ID: issue.warehouse_ID })
+    );
+    if (!back) {
+      await tx.run(
+        INSERT.into('mobis.db.Inventory').entries({
+          part_ID: issue.part_ID,
+          location_ID: issue.warehouse_ID,
+          quantityOnHand: quantity,
+          lastMovementAt: now
+        })
+      );
+    }
+
+    await tx.run(
+      INSERT.into(ApplicationLogs).entries({
+        layer: 'InventoryService',
+        operation: 'returnFromInspection',
+        message: `Issue ${issueID}: ${quantity} unit(s) returned from inspection to warehouse ${issue.warehouse_ID}.`,
         severity: 'INFO'
       })
     );
