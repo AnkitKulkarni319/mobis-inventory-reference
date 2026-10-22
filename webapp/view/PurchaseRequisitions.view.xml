@@ -28,7 +28,7 @@
 <Text text="Description"/>
 </Column>
 <Column minScreenWidth="Tablet" demandPopin="true">
-<Text text="Location"/>
+<Text text="Warehouse"/>
 </Column>
 <Column hAlign="End">
 <Text text="Quantity"/>

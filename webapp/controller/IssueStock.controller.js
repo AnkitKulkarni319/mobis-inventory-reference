@@ -26,25 +26,44 @@ sap.ui.define([
                 "issueParts"
             );
 
+            // Current page of the issues table
             this.getView().setModel(
                 new JSONModel({
                     items: []
                 }),
-                "latestIssues"
+                "issues"
+            );
+
+            // Pagination state + filter dropdown options
+            this.getView().setModel(
+                new JSONModel({
+                    page: 1,
+                    pageSize: 10,
+                    total: 0,
+                    totalPages: 1,
+                    pages: [],
+                    scOptions: [{ key: "", text: "All Service Centers" }]
+                }),
+                "ui"
             );
 
             this._aSpareParts = [];
             this._aInventory = [];
+            this._aAllIssues = [];   // every issue, loaded once
+            this._aFiltered = [];    // after filter bar is applied
 
             this._pSpareParts = this._loadSpareParts();
             this._pInventory = this._loadInventory();
 
-            this._loadLatestIssues();
+            this._loadAllIssues();
         },
 
 
-        // Latest 3 stock issues (all of them go to a service center).
-        _loadLatestIssues: async function () {
+        /* =========================================================
+         * ALL STOCK ISSUES  (load -> filter -> paginate)
+         * ======================================================= */
+
+        _loadAllIssues: async function () {
 
             let oBinding;
 
@@ -63,9 +82,9 @@ sap.ui.define([
                     }
                 );
 
-                const aContexts = await oBinding.requestContexts(0, 3);
+                const aContexts = await oBinding.requestContexts(0, 10000);
 
-                const aItems = aContexts.map(function (oContext) {
+                this._aAllIssues = aContexts.map(function (oContext) {
 
                     const oData = oContext.getObject();
 
@@ -74,26 +93,28 @@ sap.ui.define([
                     const oWarehouse = oData.warehouse || {};
 
                     return {
+                        serviceCenterID: oData.serviceCenter_ID || oCenter.ID || "",
                         serviceCenter: oCenter.name || "",
                         serviceCenterCode: oCenter.serviceCenterCode || "",
                         partNumber: oPart.partNumber || "",
                         description: oPart.description || "",
+                        warehouseID: oData.warehouse_ID || oWarehouse.ID || "",
                         warehouse: oWarehouse.name || "",
                         quantity: oData.issuedQuantity || 0,
                         reference: oData.remarks || "",
                         status: oData.status || "",
+                        rawDate: oData.issueDate ? new Date(oData.issueDate).getTime() : 0,
                         dateTime: this._formatDateTime(oData.issueDate)
                     };
 
                 }, this);
 
-                this.getView()
-                    .getModel("latestIssues")
-                    .setProperty("/items", aItems);
+                this._rebuildFilterOptions();
+                this._applyFilters(false);
 
             } catch (oError) {
 
-                console.error("Error loading latest stock issues:", oError);
+                console.error("Error loading stock issues:", oError);
 
             } finally {
 
@@ -101,6 +122,158 @@ sap.ui.define([
                     oBinding.destroy();
                 }
             }
+        },
+
+
+        // Build the Service Center dropdown from the data that is actually loaded
+        _rebuildFilterOptions: function () {
+
+            const oUi = this.getView().getModel("ui");
+
+            // remember current selection (re-setting items can reset it)
+            const sSC = this.byId("filterServiceCenter").getSelectedKey();
+
+            const mSC = {};
+
+            this._aAllIssues.forEach(function (o) {
+
+                if (o.serviceCenterID) {
+                    mSC[o.serviceCenterID] =
+                        o.serviceCenter + (o.serviceCenterCode ? " (" + o.serviceCenterCode + ")" : "");
+                }
+            });
+
+            const aOptions = [{ key: "", text: "All Service Centers" }].concat(
+                Object.keys(mSC)
+                    .map(function (k) { return { key: k, text: mSC[k] }; })
+                    .sort(function (a, b) { return a.text.localeCompare(b.text); })
+            );
+
+            oUi.setProperty("/scOptions", aOptions);
+
+            this.byId("filterServiceCenter").setSelectedKey(sSC);
+        },
+
+
+        _applyFilters: function (bResetPage) {
+
+            const oUi = this.getView().getModel("ui");
+
+            const sSC = this.byId("filterServiceCenter").getSelectedKey();
+
+            this._aFiltered = this._aAllIssues.filter(function (o) {
+
+                return !sSC || String(o.serviceCenterID) === String(sSC);
+            });
+
+            if (bResetPage !== false) {
+                oUi.setProperty("/page", 1);
+            }
+
+            this._renderPage();
+        },
+
+
+        _renderPage: function () {
+
+            const oUi = this.getView().getModel("ui");
+
+            const iTotal = this._aFiltered.length;
+            const iPageSize = oUi.getProperty("/pageSize");
+            const iTotalPages = Math.max(1, Math.ceil(iTotal / iPageSize));
+
+            let iPage = oUi.getProperty("/page");
+            iPage = Math.min(Math.max(1, iPage), iTotalPages);
+
+            const iStart = (iPage - 1) * iPageSize;
+            const aPage = this._aFiltered.slice(iStart, iStart + iPageSize);
+
+            this.getView()
+                .getModel("issues")
+                .setProperty("/items", aPage);
+
+            oUi.setProperty("/page", iPage);
+            oUi.setProperty("/total", iTotal);
+            oUi.setProperty("/totalPages", iTotalPages);
+            oUi.setProperty("/pages", this._buildPages(iPage, iTotalPages));
+        },
+
+
+        /* ---------- filter bar handlers ---------- */
+
+        onFilterChange: function () {
+
+            this._applyFilters(true);
+        },
+
+
+        onRefreshIssues: function () {
+
+            this._loadAllIssues();
+        },
+
+
+        /* ---------- pagination handlers ---------- */
+
+        // Numbered pager:  ‹ 1 … 4 [5] 6 … 20 ›
+        _buildPages: function (iPage, iTotal) {
+
+            const aBtn = [];
+
+            aBtn.push({
+                label: "‹", page: iPage - 1, type: "Transparent",
+                enabled: iPage > 1, tooltip: "Previous page"
+            });
+
+            let iPrev = 0;
+
+            for (let p = 1; p <= iTotal; p++) {
+
+                if (!(p === 1 || p === iTotal || Math.abs(p - iPage) <= 1)) {
+                    continue;
+                }
+
+                if (p - iPrev === 2) {
+                    // a single skipped page: show it instead of an ellipsis
+                    aBtn.push({
+                        label: String(iPrev + 1), page: iPrev + 1, type: "Transparent",
+                        enabled: true, tooltip: "Page " + (iPrev + 1)
+                    });
+                } else if (p - iPrev > 2) {
+                    aBtn.push({
+                        label: "…", page: 0, type: "Transparent",
+                        enabled: false, tooltip: ""
+                    });
+                }
+
+                aBtn.push({
+                    label: String(p), page: p,
+                    type: p === iPage ? "Emphasized" : "Transparent",
+                    enabled: true, tooltip: "Page " + p
+                });
+
+                iPrev = p;
+            }
+
+            aBtn.push({
+                label: "›", page: iPage + 1, type: "Transparent",
+                enabled: iPage < iTotal, tooltip: "Next page"
+            });
+
+            return aBtn;
+        },
+
+
+        onPageButtonPress: function (oEvent) {
+
+            const oItem = oEvent.getSource().getBindingContext("ui").getObject();
+
+            if (!oItem.page) {
+                return;
+            }
+
+            this.getView().getModel("ui").setProperty("/page", oItem.page);
+            this._renderPage();
         },
 
 
@@ -130,11 +303,9 @@ sap.ui.define([
         },
 
 
-        onRefreshLatestIssues: function () {
-
-            this._loadLatestIssues();
-        },
-
+        /* =========================================================
+         * FORM: parts / inventory / issue stock
+         * ======================================================= */
 
         _loadSpareParts: async function () {
 
@@ -152,11 +323,6 @@ sap.ui.define([
                 this._aSpareParts = aContexts.map(function (oContext) {
                     return oContext.getObject();
                 });
-
-                console.log(
-                    "Spare Parts loaded:",
-                    this._aSpareParts
-                );
 
             } catch (oError) {
 
@@ -184,11 +350,6 @@ sap.ui.define([
                 this._aInventory = aContexts.map(function (oContext) {
                     return oContext.getObject();
                 });
-
-                console.log(
-                    "Inventory loaded:",
-                    this._aInventory
-                );
 
             } catch (oError) {
 
@@ -237,10 +398,6 @@ sap.ui.define([
                     return aPartIDs.includes(String(oPart.ID));
                 }
             );
-
-            console.log("Selected Location:", sLocationID);
-            console.log("Inventory for Location:", aInventoryForLocation);
-            console.log("Filtered Spare Parts:", aFilteredParts);
 
             oIssuePartsModel.setProperty("/items", aFilteredParts);
 
@@ -311,7 +468,7 @@ sap.ui.define([
                     .setProperty("/items", []);
 
                 await this._loadInventory();
-                await this._loadLatestIssues();
+                await this._loadAllIssues();
 
             } catch (oError) {
 

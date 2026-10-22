@@ -45,7 +45,7 @@
 <Table id="invTable" class="recentTable" growing="true" growingThreshold="20" noDataText="No inventory records found" items="{inventoryList>/items}">
 <columns>
 <Column>
-<Text text="Location"/>
+<Text text="Warehouse"/>
 </Column>
 <Column>
 <Text text="Part No."/>

@@ -709,7 +709,7 @@ sap.ui.define([
                                     "Total Records",
 
                                 subtitle:
-                                    "SKU x Location",
+                                    "Location",
 
                                 value:
                                     aInvRows.length,

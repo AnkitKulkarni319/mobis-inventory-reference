@@ -16,7 +16,7 @@
             <VBox class="pgBody">
 
                 <Text
-                    text="Defective parts returned from service centers. Select an item to view its details and return it to warehouse stock after inspection."
+                    text="Defective parts returned from service centers. Select an item to view its details, then return it to warehouse stock or mark it as consumed."
                     class="pgIntro"/>
 
                 <!-- INSPECTION LIST -->
@@ -44,6 +44,21 @@
                             type="Transparent"
                             tooltip="Refresh"
                             press="onRefresh"/>
+                    </Toolbar>
+
+                    <!-- FILTER BAR -->
+                    <Toolbar class="sapUiTinyMarginTopBottom" style="Clear">
+
+                        <Select
+                            id="inspFilterServiceCenter"
+                            width="14rem"
+                            items="{insp>/scOptions}"
+                            change="onFilterChange">
+                            <core:Item
+                                key="{insp>key}"
+                                text="{insp>text}"/>
+                        </Select>
+
                     </Toolbar>
 
                     <Table
@@ -84,7 +99,7 @@
 
                         <items>
                             <ColumnListItem
-                                type="Navigation"
+                                type="Active"
                                 press="onItemPress">
                                 <cells>
 
@@ -114,41 +129,30 @@
 
                 </VBox>
 
-                <!-- DETAILS + RETURN TO WAREHOUSE -->
-                <VBox
-                    class="pgCard"
-                    visible="{= !!${insp>/selected}}">
+            </VBox>
+        </content>
 
-                    <Toolbar class="dashPanelToolbar">
+        <dependents>
 
-                        <core:Icon
-                            src="sap-icon://hint"
-                            class="panelHeaderIcon"/>
+            <!-- INSPECTION DETAILS POPUP -->
+            <Dialog
+                id="inspDialog"
+                title="Inspection Details"
+                contentWidth="38rem"
+                draggable="true"
+                afterClose="onDialogClosed">
 
-                        <Title
-                            text="Inspection Details"
-                            level="H3"
-                            class="sapUiTinyMarginBegin"/>
-
-                        <ToolbarSpacer/>
-
-                        <Button
-                            icon="sap-icon://decline"
-                            type="Transparent"
-                            tooltip="Close"
-                            press="onCloseDetails"/>
-                    </Toolbar>
+                <content>
 
                     <f:SimpleForm
-                        class="pgForm"
                         editable="false"
                         layout="ResponsiveGridLayout"
                         labelSpanXL="4"
                         labelSpanL="4"
                         labelSpanM="4"
                         labelSpanS="12"
-                        columnsXL="2"
-                        columnsL="2"
+                        columnsXL="1"
+                        columnsL="1"
                         columnsM="1">
 
                         <core:Title text="Part"/>
@@ -159,7 +163,7 @@
                         <Label text="Description"/>
                         <Text text="{insp>/selected/description}"/>
 
-                        <Label text="Return To Warehouse"/>
+                        <Label text="Warehouse"/>
                         <Text text="{insp>/selected/warehouse}"/>
 
                         <core:Title text="Source &amp; Quantities"/>
@@ -189,36 +193,40 @@
 
                     </f:SimpleForm>
 
-                    <VBox class="sapUiSmallMarginBeginEnd">
+                    <VBox class="sapUiSmallMarginBeginEnd sapUiSmallMarginBottom">
 
-                        <Label text="Quantity to Return to Warehouse"/>
+                        <Label text="Quantity"/>
 
                         <Input
                             type="Number"
                             width="12rem"
-                            value="{insp>/returnQty}"/>
+                            value="{insp>/qty}"/>
 
                     </VBox>
 
-                    <HBox
-                        justifyContent="End"
-                        class="pgActions">
+                </content>
 
-                        <Button
-                            text="Close"
-                            press="onCloseDetails"/>
+                <buttons>
 
-                        <Button
-                            text="Return to Warehouse"
-                            icon="sap-icon://undo"
-                            type="Emphasized"
-                            class="pgPrimaryBtn"
-                            press="onReturnToWarehouse"/>
-                    </HBox>
+                    <Button
+                        text="Close"
+                        press="onCloseDetails"/>
 
-                </VBox>
+                    <Button
+                        text="Consume"
+                        icon="sap-icon://accept"
+                        press="onConsume"/>
 
-            </VBox>
-        </content>
+                    <Button
+                        text="Return to Warehouse"
+                        icon="sap-icon://undo"
+                        type="Emphasized"
+                        press="onReturnToWarehouse"/>
+
+                </buttons>
+
+            </Dialog>
+
+        </dependents>
     </Page>
 </mvc:View>

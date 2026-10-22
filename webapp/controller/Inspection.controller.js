@@ -23,10 +23,13 @@ sap.ui.define([
                 new JSONModel({
                     items: [],
                     selected: null,
-                    returnQty: ""
+                    qty: "",
+                    scOptions: [{ key: "", text: "All Service Centers" }]
                 }),
                 "insp"
             );
+
+            this._aAllItems = [];   // every kept-for-inspection item, before the filter
 
             this.getOwnerComponent()
                 .getRouter()
@@ -38,6 +41,12 @@ sap.ui.define([
         _onRouteMatched: function () {
 
             this._clearSelection();
+
+            const oFilter = this.byId("inspFilterServiceCenter");
+            if (oFilter) {
+                oFilter.setSelectedKey("");
+            }
+
             this._loadItems();
         },
 
@@ -79,6 +88,7 @@ sap.ui.define([
 
                     return {
                         ID: oData.ID,
+                        serviceCenterID: oData.serviceCenter_ID || oCenter.ID || "",
                         partID: oData.part_ID || oPart.ID,
                         warehouseID: oData.warehouse_ID || oWarehouse.ID,
                         serviceCenter: oCenter.name || "",
@@ -96,9 +106,10 @@ sap.ui.define([
 
                 }, this);
 
-                this.getView()
-                    .getModel("insp")
-                    .setProperty("/items", aItems);
+                this._aAllItems = aItems;
+
+                this._rebuildFilterOptions();
+                this._applyFilter();
 
             } catch (oError) {
 
@@ -139,6 +150,63 @@ sap.ui.define([
         },
 
 
+        // ================================================================
+        // SERVICE CENTER FILTER
+        // ================================================================
+
+        // Build the dropdown from the service centers that have items
+        _rebuildFilterOptions: function () {
+
+            const oInsp = this.getView().getModel("insp");
+            const oSelect = this.byId("inspFilterServiceCenter");
+
+            const mSC = {};
+
+            this._aAllItems.forEach(function (o) {
+
+                if (o.serviceCenterID) {
+                    mSC[o.serviceCenterID] =
+                        o.serviceCenter + (o.serviceCenterCode ? " (" + o.serviceCenterCode + ")" : "");
+                }
+            });
+
+            const sKept = oSelect.getSelectedKey();
+
+            oInsp.setProperty(
+                "/scOptions",
+                [{ key: "", text: "All Service Centers" }].concat(
+                    Object.keys(mSC)
+                        .map(function (k) { return { key: k, text: mSC[k] }; })
+                        .sort(function (a, b) { return a.text.localeCompare(b.text); })
+                )
+            );
+
+            // keep the current selection, unless that center has no items left
+            oSelect.setSelectedKey(mSC[sKept] ? sKept : "");
+        },
+
+
+        _applyFilter: function () {
+
+            const sSC = this.byId("inspFilterServiceCenter").getSelectedKey();
+
+            this.getView()
+                .getModel("insp")
+                .setProperty(
+                    "/items",
+                    this._aAllItems.filter(function (o) {
+                        return !sSC || String(o.serviceCenterID) === String(sSC);
+                    })
+                );
+        },
+
+
+        onFilterChange: function () {
+
+            this._applyFilter();
+        },
+
+
         onRefresh: function () {
 
             this._loadItems();
@@ -158,7 +226,9 @@ sap.ui.define([
             const oInsp = this.getView().getModel("insp");
 
             oInsp.setProperty("/selected", Object.assign({}, oItem));
-            oInsp.setProperty("/returnQty", String(oItem.defectiveQuantity));
+            oInsp.setProperty("/qty", String(oItem.defectiveQuantity));
+
+            this.byId("inspDialog").open();
         },
 
 
@@ -167,44 +237,68 @@ sap.ui.define([
             const oInsp = this.getView().getModel("insp");
 
             oInsp.setProperty("/selected", null);
-            oInsp.setProperty("/returnQty", "");
+            oInsp.setProperty("/qty", "");
         },
 
 
         onCloseDetails: function () {
+
+            this.byId("inspDialog").close();
+        },
+
+
+        onDialogClosed: function () {
 
             this._clearSelection();
         },
 
 
         // ================================================================
-        // RETURN TO WAREHOUSE
+        // RETURN TO WAREHOUSE / CONSUME
+        // Both act on the quantity typed in the popup and both take
+        // units out of "kept for inspection" (defectiveReturnedQuantity):
+        //   returnFromInspection  -> units go back into warehouse stock
+        //   consumeFromInspection -> units are written off as consumed
         // ================================================================
 
-        onReturnToWarehouse: function () {
+        // Returns the entered quantity, or null (after showing an error).
+        _getValidQty: function (sVerb) {
 
             const oInsp = this.getView().getModel("insp");
             const oSelected = oInsp.getProperty("/selected");
 
             if (!oSelected) {
-                return;
+                return null;
             }
 
-            const nQty = Number(oInsp.getProperty("/returnQty"));
+            const nQty = Number(oInsp.getProperty("/qty"));
 
             if (!Number.isInteger(nQty) || nQty <= 0) {
 
                 MessageBox.error("Please enter a valid whole-number quantity.");
-                return;
+                return null;
             }
 
             if (nQty > oSelected.defectiveQuantity) {
 
                 MessageBox.error(
-                    "You can return at most " +
+                    "You can " + sVerb + " at most " +
                     oSelected.defectiveQuantity + " unit(s)."
                 );
 
+                return null;
+            }
+
+            return nQty;
+        },
+
+
+        onReturnToWarehouse: function () {
+
+            const oSelected = this.getView().getModel("insp").getProperty("/selected");
+            const nQty = this._getValidQty("return");
+
+            if (!nQty) {
                 return;
             }
 
@@ -218,7 +312,14 @@ sap.ui.define([
                     onClose: function (sAction) {
 
                         if (sAction === MessageBox.Action.OK) {
-                            this._executeReturn(oSelected, nQty);
+
+                            this._runAction(
+                                "returnFromInspection",
+                                oSelected,
+                                nQty,
+                                nQty + " unit(s) returned to warehouse. Inventory updated.",
+                                "Failed to return item to warehouse."
+                            );
                         }
 
                     }.bind(this)
@@ -227,53 +328,80 @@ sap.ui.define([
         },
 
 
-        // Moves N units from "defective / kept for inspection" back into
-        // warehouse stock, using one batch so all three changes succeed or
-        // fail together:
-        //   ServicePartIssues.defectiveReturnedQuantity  - N
-        //   ServicePartIssues.unusedReturnedQuantity     + N
-        //   Inventory.quantityOnHand                     + N
-               // Calls the service action "returnFromInspection", which updates
-        // the service issue and the warehouse stock on the server.
-        _executeReturn: async function (oSelected, nQty) {
+        onConsume: function () {
 
-            const oView = this.getView();
+            const oSelected = this.getView().getModel("insp").getProperty("/selected");
+            const nQty = this._getValidQty("consume");
 
-            oView.setBusy(true);
+            if (!nQty) {
+                return;
+            }
+
+            MessageBox.confirm(
+                "Mark " + nQty + " unit(s) of " + oSelected.partNumber +
+                " as consumed? They will not go back to warehouse stock.",
+                {
+                    title: "Consume",
+                    actions: [MessageBox.Action.OK, MessageBox.Action.CANCEL],
+                    emphasizedAction: MessageBox.Action.OK,
+                    onClose: function (sAction) {
+
+                        if (sAction === MessageBox.Action.OK) {
+
+                            this._runAction(
+                                "consumeFromInspection",
+                                oSelected,
+                                nQty,
+                                nQty + " unit(s) marked as consumed.",
+                                "Failed to consume item."
+                            );
+                        }
+
+                    }.bind(this)
+                }
+            );
+        },
+
+
+        // Calls a service action (issueID, quantity), then closes the popup
+        // and reloads the list.
+        _runAction: async function (sAction, oSelected, nQty, sSuccess, sFailure) {
+
+            const oDialog = this.byId("inspDialog");
+
+            oDialog.setBusy(true);
 
             try {
 
                 const oAction = this.getOwnerComponent()
                     .getModel()
-                    .bindContext("/returnFromInspection(...)");
+                    .bindContext("/" + sAction + "(...)");
 
                 oAction.setParameter("issueID", oSelected.ID);
                 oAction.setParameter("quantity", nQty);
 
                 await oAction.execute();
 
-                MessageToast.show(
-                    nQty + " unit(s) returned to warehouse. Inventory updated."
-                );
+                MessageToast.show(sSuccess);
 
-                this._clearSelection();
+                oDialog.close();
 
                 await this._loadItems();
 
             } catch (oError) {
 
-                console.error("Return from inspection error:", oError);
+                console.error(sAction + " error:", oError);
 
                 MessageBox.error(
-                    (oError && oError.message) ||
-                    "Failed to return item to warehouse."
+                    (oError && oError.message) || sFailure
                 );
 
             } finally {
 
-                oView.setBusy(false);
+                oDialog.setBusy(false);
             }
         },
+
 
         // ================================================================
         // NAVIGATION

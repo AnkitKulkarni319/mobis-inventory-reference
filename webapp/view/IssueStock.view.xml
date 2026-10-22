@@ -87,11 +87,11 @@
                             type="Number"
                             placeholder="e.g. 5"/>
 
-                        <Label text="Reference"/>
+                        <Label text="Description"/>
 
                         <Input
                             id="issueRefInput"
-                            placeholder="e.g. Service Order SO-2001"/>
+                            />
 
                         <Label
                             text="Service Center"
@@ -142,7 +142,7 @@
 
                 </VBox>
 
-                <!-- LATEST STOCK ISSUES -->
+                <!-- ALL STOCK ISSUES -->
                 <VBox class="pgCard">
 
                     <Toolbar class="dashPanelToolbar">
@@ -152,7 +152,7 @@
                             class="panelHeaderIcon"/>
 
                         <Title
-                            text="Latest Stock Issues"
+                            text="All Stock Issues"
                             level="H3"
                             class="sapUiTinyMarginBegin"/>
 
@@ -161,15 +161,30 @@
                         <Button
                             icon="sap-icon://refresh"
                             type="Transparent"
-                            tooltip="Refresh latest stock issues"
-                            press="onRefreshLatestIssues"/>
+                            tooltip="Refresh stock issues"
+                            press="onRefreshIssues"/>
+                    </Toolbar>
+
+                    <!-- FILTER BAR -->
+                    <Toolbar class="sapUiTinyMarginTopBottom" style="Clear">
+
+                        <Select
+                            id="filterServiceCenter"
+                            width="14rem"
+                            items="{ui>/scOptions}"
+                            change="onFilterChange">
+                            <core:Item
+                                key="{ui>key}"
+                                text="{ui>text}"/>
+                        </Select>
+
                     </Toolbar>
 
                     <Table
-                        id="latestIssuesTable"
+                        id="allIssuesTable"
                         class="recentTable"
                         noDataText="No stock issues found"
-                        items="{latestIssues>/items}">
+                        items="{issues>/items}">
 
                         <columns>
                             <Column>
@@ -212,35 +227,54 @@
                                 <cells>
 
                                     <ObjectIdentifier
-                                        title="{latestIssues>serviceCenter}"
-                                        text="{latestIssues>serviceCenterCode}"/>
+                                        title="{issues>serviceCenter}"
+                                        text="{issues>serviceCenterCode}"/>
 
                                     <ObjectIdentifier
-                                        title="{latestIssues>partNumber}"
-                                        text="{latestIssues>description}"/>
+                                        title="{issues>partNumber}"
+                                        text="{issues>description}"/>
 
-                                    <Text text="{latestIssues>warehouse}"/>
+                                    <Text text="{issues>warehouse}"/>
 
                                     <ObjectNumber
-                                        number="{latestIssues>quantity}"
+                                        number="{issues>quantity}"
                                         unit="units"
                                         emphasized="true"
                                         state="Information"/>
 
-                                    <Text text="{latestIssues>reference}"/>
+                                    <Text text="{issues>reference}"/>
 
                                     <ObjectStatus
-                                        text="{latestIssues>status}"
+                                        text="{issues>status}"
                                         inverted="true"
-                                        state="{= ${latestIssues>status} === 'RECONCILED' ? 'Success' : 'Warning'}"/>
+                                        state="{= ${issues>status} === 'RECONCILED' ? 'Success' : 'Warning'}"/>
 
-                                    <Text text="{latestIssues>dateTime}"/>
+                                    <Text text="{issues>dateTime}"/>
 
                                 </cells>
                             </ColumnListItem>
                         </items>
 
                     </Table>
+
+                    <!-- PAGINATION -->
+                    <Toolbar class="sapUiTinyMarginTop" style="Clear">
+
+                        <ToolbarSpacer/>
+
+                        <HBox items="{ui>/pages}">
+                            <Button
+                                text="{ui>label}"
+                                type="{ui>type}"
+                                enabled="{ui>enabled}"
+                                tooltip="{ui>tooltip}"
+                                class="sapUiTinyMarginBeginEnd"
+                                press="onPageButtonPress"/>
+                        </HBox>
+
+                        <ToolbarSpacer/>
+
+                    </Toolbar>
 
                 </VBox>
 
