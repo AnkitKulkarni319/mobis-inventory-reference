@@ -69,6 +69,15 @@ entity PurchaseRequisitions as projection on db.PurchaseRequisitions;
     issueID  : UUID,
     quantity : Integer
   ) returns ServicePartIssues;
+
+
+
+ @restrict: [{ grant: 'consumeFromInspection', to: 'WarehouseExecutive' }]
+  action consumeFromInspection(
+    issueID  : UUID,
+    quantity : Integer
+  ) returns ServicePartIssues;
+
   @restrict: [
     { grant: 'READ', to: ['WarehouseExecutive','ProcurementOfficer'] },
     { grant: ['CREATE','UPDATE'], to: 'WarehouseExecutive' }

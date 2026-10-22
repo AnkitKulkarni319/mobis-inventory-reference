@@ -690,4 +690,49 @@ this.on('raisePurchaseRequisition', async (req) => {
     return SELECT.one.from('mobis.db.ServicePartIssues').where({ ID: issueID });
   });
 
+
+
+    // ---------- CONSUME KEPT-FOR-INSPECTION PARTS ----------
+  this.on('consumeFromInspection', async (req) => {
+    const { issueID, quantity } = req.data;
+    const tx = cds.transaction(req);
+
+    if (!Number.isInteger(quantity) || quantity <= 0)
+      return req.error(400, 'Quantity must be a whole number greater than zero.');
+
+    const issue = await tx.run(
+      SELECT.one.from('mobis.db.ServicePartIssues').where({ ID: issueID })
+    );
+    if (!issue) return req.error(404, 'Service issue not found.');
+
+    const defective = issue.defectiveReturnedQuantity || 0;
+    if (quantity > defective)
+      return req.error(
+        409,
+        `Only ${defective} unit(s) are kept for inspection. Requested: ${quantity}.`
+      );
+
+    const moved = await tx.run(
+      UPDATE('mobis.db.ServicePartIssues')
+        .set({
+          defectiveReturnedQuantity: { '-=': quantity },
+          consumedQuantity: { '+=': quantity }
+        })
+        .where({ ID: issueID, defectiveReturnedQuantity: { '>=': quantity } })
+    );
+    if (!moved)
+      return req.error(409, 'These units were already processed. Please refresh.');
+
+    await tx.run(
+      INSERT.into(ApplicationLogs).entries({
+        layer: 'InventoryService',
+        operation: 'consumeFromInspection',
+        message: `Issue ${issueID}: ${quantity} unit(s) kept for inspection marked as consumed.`,
+        severity: 'INFO'
+      })
+    );
+
+    return SELECT.one.from('mobis.db.ServicePartIssues').where({ ID: issueID });
+  });
+
 });
